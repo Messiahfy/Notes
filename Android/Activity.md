@@ -28,8 +28,8 @@ Activity B中调用setResult()。
 1. 资源相关的系统配置发生改变导致Activity被杀死并重新创建（如横竖旋转屏幕）
 2. 资源内存不足导致低优先级的Activity被杀死
 ### 保存和恢复Activity状态
-* 异常情况下，可通过onSaveInstanceState()存储数据，通过onCreate()或者onRestoreInstanceState()恢复数据（onCreate需要判空）。只有在异常情况下，系统才会调用onSaveInstanceState()和onRestoreInstanceState()，正常的生命周期不会（如用户按了返回键或者调用了finish()方法）。  
-* 在情况1下，可以通过设定来禁止屏幕旋转等。  
+* 异常情况下，可通过onSaveInstanceState()存储数据，通过onCreate()或者onRestoreInstanceState()恢复数据（onCreate需要判空）。注意，只有在异常情况下，系统才会调用onSaveInstanceState()和onRestoreInstanceState()，正常的生命周期不会（如用户按了返回键或者调用了finish()方法就是正常生命周期）。  
+* 在异常情况1下，可以通过设定来禁止屏幕旋转等。  
 * 默认情况下，在onSaveInstanceState()和onRestoreInstanceState()方法中，系统自动为我们做了一定的恢复工作。当Activity在异常情况下需要重新创建时，系统会默认自动为我们保存当前Activity的视图结构，并且在Activity重启的时候恢复这些数据。系统统使用Bundle实例状态来保存活动布局中每个View对象的信息（如输入到EditText小部件中的文本值）。具体针对某一个特定的View系统能为我们恢复哪些数据，可以查看View源码，和Activity一样，每个View都有onSaveInstanceState()和onRestoreInstanceState()方法。
 * 关于保存和恢复View层次结构，系统的工作流程：Activity调用onSaveInstanceState()，然后Activity会委托Window去保存数据，接着Window委托顶级容器（DecorView）去保存数据，DecorView再一一通知子元素保存数据。onRestoreInstanceState()的过程类似。
 * 虽然系统会自动保存和恢复一些数据，但某些数据仍需自行保存和恢复。Bundle不适合保存过多的数据，因为消耗内存。过多的数据可以考虑采取综合的方式，持久化存储、onSaveInstanceState()和ViewModel等。
@@ -38,10 +38,10 @@ Activity B中调用setResult()。
 * 当 Activity A 启动 Activity B，Activity A停止，但系统保存A的状态（如滚动位置和输入到表单中的文本）。如果用户在活动B中按下后退按钮，则活动A将恢复其状态。
 * 当用户通过按Home按钮离开一个任务时，当前活动停止并且其任务进入后台。系统保留任务中每个活动的状态。如果用户稍后通过选择启动该任务的启动器图标来恢复该任务，则该任务进入前台并重新开始任务栈顶部的活动。
 * 如果用户按下“后退”按钮，则当前活动从任务栈中弹出并销毁。 任务栈中的前一个活动恢复。当一个活动被销毁时，系统不保留活动的状态。
-* 活动可以实例化多次，甚至可以从其他任务。
+* 活动可以实例化多次，甚至可以从其他任务来实例化它。
 
 ## 管理Activity的启动模式和任务栈
-> &emsp;&emsp;如果活动A启动活动B，则活动B可以在其清单文件中定义如何与当前任务相关联（如果有的话），活动A也可以通过Intent的flag请求活动B如何与当前任务相关联。 如果两个活动都定义活动B如何与任务相关联，则活动A的请求（如意图中定义的）覆盖活动B的请求（如其清单中所定义的）。  
+> &emsp;&emsp;如果活动A启动活动B，则活动B可以在其清单文件中定义如何与当前任务相关联（如果有的话），活动A也可以通过Intent的flag请求活动B如何与当前任务相关联。 如果两个活动都定义活动B如何与任务相关联，则活动A的请求（意图中定义Flag）覆盖活动B的请求（其清单中所定义的）。  
 **注意**：清单文件可用的某些启动模式不可用作意图标志，同样，某些意图标志可用的启动模式也不能在清单中定义。
 
 ### 使用manifest文件
@@ -93,4 +93,39 @@ Activity B中调用setResult()。
 2. clearTaskOnLaunch 如果在任务栈的根Activity中将此属性设为"true"，则每当用户离开任务然后返回时，系统都会将任务栈清除到只剩下根Activity。
 3. finishOnTaskLaunch 此属性类似于clearTaskOnLaunch，但它对单个Activity起作用，而非整个任务。
 
-## 启动任务
+## 概览屏幕
+> 概览屏幕（也称为最新动态屏幕、最近任务列表或最近使用的应用）是一个系统级别的UI，其中列出了最近访问过Activity和任务栈。  
+
+&emsp;&emsp;Android 5.0（API级别21）引入了一个以文档为中心的模型，其中包含不同文档的同一活动的多个实例在“最近”屏幕中可能显示为任务。例如，Google云端硬盘可能针对多个Google文档中的每一个都有一项任务。每个文档在“最近”屏幕中显示为一项任务。
+![](https://developer.android.google.cn/images/components/recents.png)
+&emsp;&emsp;另一个常见的例子是当用户使用浏览器时，点击“共享”>“Gmail”。出现Gmail应用程序的编辑界面。此时点击“最近”按钮会将Chrome和Gmail作为两个分离的任务运行。在较低版本的Android中，所有活动都显示为单个任务，使后退按钮成为唯一的导航工具。  
+&emsp;&emsp;通常，让系统定义任务和Activity在“最近”屏幕中的表示方式，而不需要修改此行为。但是，应用程序可以决定Activity在“最近”屏幕中的显示方式和时间。 **ActivityManager.AppTask**类允许您管理任务，而**Intent类的flag**允许您指定何时从“最近”屏幕添加或删除活动。而且，**\<activity\>**属性可让您在清单中设置行为。
+
+### 将任务添加到概览屏幕
+> 通过使用Intent的flag添加任务，可以控制某文档在概览屏幕中打开或重新打开的时间和方式。使用<activity>属性时，可以选择始终在新任务中打开文档，或选择对文档重复使用现任务。  
+ 
+#### 使用Intent的flag添加任务
+* FLAG_ACTIVITY_NEW_DOCUMENT 使用此标志可以被启动的activity在概览屏幕中以新的任务运行（被启动的activity的清单文件中launchMode必须是standard(默认)）
+* FLAG_ACTIVITY_MULTIPLE_TASK 上述标志与此标志一起使用时，每次启动都会创建一个以目标Activity为根的新任务
+
+#### 使用Activity属性添加任务
+
+> Activity还可以在其清单文件中通过<activity>的属性android:documentLaunchMode进入新任务。此属性有四个值：
+1. "intoExiting" 该Activity会对文档重复使用现有任务。这与设置FLAG_ACTIVITY_NEW_DOCUMENT但不设置FLAG_ACTIVITY_MULTIPLE_TASK所产生的效果相同。
+2. "always" 该Activity为文档创建新任务，即使文档已打开也是如此。使用此值与同时设置FLAG_ACTIVITY_NEW_DOCUMENT和FLAG_ACTIVITY_MULTIPLE_TASK所产生的效果相同
+3. "none" 该Activity不会为文档创建新任务。概览屏幕将按其默认方式对待此Activity：为应用显示单个任务，该任务将从用户上次调用的任意Activity开始继续执行。
+4. "never" 该Activity不会为文档创建新任务。设置此值会替代FLAG_ACTIVITY_NEW_DOCUMENT和FLAG_ACTIVITY_MULTIPLE_TASK的行为，并且与"none"一样，概览屏幕将为应用显示单个任务，该任务将从用户上次调用的任意Activity开始继续执行。
+> **注意**，使用"intoExiting"和"always"时，必须使用launchMode="standard"。如果没有指定launchMode="standard"，则android:documentLaunchMode将使用"none"。
+ 
+### 移除任务
+&emsp;&emsp;默认情况下，在Activity结束后，文档任务会从概览屏幕中自动移除。可以使用ActivityManager.AppTask类、Intent的flag或<activity>属性替代此行为。  
+&emsp;&emsp;通过将<activit>属性android:excludeFromRecents设置为true，可以始终将任务从概览屏幕中完全排除。
+&emsp;&emsp;通过将<activity>属性android:maxRecents设置为整形值，设置应用能够包括在概览屏幕中的最大任务数。默认值为16。达到最大任务数后，最近最少使用的任务将从概览屏幕移除。 
+ 
+#### 使用AppTask类移除任务
+在创建新任务于概览屏幕的activity中，可以调用finishAndRemoveTask() 移除该任务以及结束所有与之相关的Activity。  
+> **注意**：finishAndRemoveTask()将覆盖FLAG_ACTIVITY_RETAIN_IN_RECENTS
+
+#### 保留已完成的任务
+&emsp;&emsp;如果想将任务保留在概览屏幕中，即使其Activity已经结束（finished），可在启动Activity的Intent的addFlags()方法中使用FLAG_ACTIVITY_RETAIN_IN_RECENTS。  
+&emsp;&emsp;要达到同样的效果，可以将<activity>属性android:autoRemoveFromRecents设置为false。文档Activity的默认值为true，常规Activity的默认值为false。此属性将覆盖FLAG_ACTIVITY_RETAIN_IN_RECENTS。
