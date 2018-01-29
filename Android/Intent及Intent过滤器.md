@@ -117,9 +117,9 @@ if (sendIntent.resolveActivity(getPackageManager()) != null) {
 ## 隐式Intent的解析（匹配规则）
 &emsp;&emsp;当系统收到隐式Intent以启动Activity时，它根据以下三个方面将该Intent与Intent过滤器进行比较，搜索该Intent的最佳Activity：
 * **Action**
-&emsp;&emsp;Intent过滤器既可以不声明任何<action>元素，也可以声明多个此类元素。如果过滤器声明了action，则Intent的action必须存在且能够和过滤规则中的任何一个action相同即可匹配成功。
-* **Category** Intent过滤器既可以不声明任何<category>元素，也可以声明多个此类元素。Intent如果设置了category，那么不管有几个，对于每个category来说，都必须是过滤器中声明了的某个category，过滤器声明的category数量可以
-多于Intent中指定的数量。由于系统调用startActivity()或者startActivityForResult()时会默认为Intent加上“android.intent.category.DEFAULT”这
-个category，且若要接收隐式Intent就必须在过滤器中加上"android.intent.category.DEFAULT"，所以Intent也可以不定义category，仍然可以匹配成功。
+&emsp;&emsp;<intent-filter>元素中必须至少包含一个<action>元素，如果<intent-filter>元素中没有<action>，那么过滤器不会接收任何隐式Intent。Intent的action必须存在且能够和过滤规则中的任何一个action相同即可匹配成功。
+* **Category** <intent-filter>元素中必须至少包含一个<category android:name="android.intent.category.DEFAULT"/>，否则无法接收任何隐式Intent。Intent如果设置了category，那么不管有几个，对于每个category来说，都必须是过滤器中声明了的某个category，过滤器声明的category数量可以多于Intent中指定的数量。由于系统调用startActivity()或者startActivityForResult()时会默认为Intent加上“android.intent.category.DEFAULT”这个category，且若要接收隐式Intent就必须在过滤器中加上"android.intent.category.DEFAULT"，所以Intent也可以不定义category，仍然可以匹配成功。
 * **Data**(URI和data type) Intent过滤器既可以不声明任何<data>元素，也可以声明多个此类元素。
 
+> 可见：1.一个Activity只要能匹配任何一组intent-filter，即可成功启动对应的Activity； 2.要匹配任何一组intent-filter,就要同时匹配action，category和data才算是完全匹配； 另外在使用隐式调用要求IntentFilter必须定义action和category，data可以没有；其中 
+category android:name=”android.intent.category.DEFAULT”是一定要设置的。因为启动的时候Intent会默认加上这个category，否则的话无法启动。
