@@ -32,12 +32,10 @@
 &emsp;&emsp;您可以指定自己的Action，供本应用或者其他应用调用组件。但是，通常使用由Intent类或其他框架类定义的Action常量。例如，Intent类的ACTION_VIEW、
 ACTION_SEND；例如，对于在系统的设置应用中打开特定屏幕的操作，将在Setting中定义。
 * **Data**
-&emsp;&emsp;引用待操作数据和/或该数据MIME类型的URI（Uri对象）。提供的数据类型通常由Intent的Action决定。例如，如果Action是ACTION_EDIT，则数据
-应包含待编辑文档的URI。  
+&emsp;&emsp;引用待操作数据的URI（Uri对象）和/或该数据的MIME类型，用于操作。提供的数据类型通常由Intent的Action决定。例如，如果Action是ACTION_EDIT，则数据应包含待编辑文档的URI。  
 &emsp;&emsp;创建Intent时，除了指定URI以外，指定数据类型（其MIME类型）往往也很重要。例如，能够显示图像的Activity可能无法播放音频文件，即便URI
 格式十分类似时也是如此。因此，指定数据的MIME类型有助于Android系统找到接收Intent的最佳组件。但有时，MIME类型可以从URI中推断得出，特别是数据是content:URI时尤其如此。
-这表明数据位于设备中，且由ContentProvider控制，这使得数据MIME类型对系统可见。要仅设置数据URI，调用setData()。要仅设置MIME类型，调用setType()。
-如果要同时设置，则应调用setDataAndType()，因为setData()和setType()会互相抵消彼此的值。
+这表明数据位于设备中，且由ContentProvider控制，这使得数据MIME类型对系统可见。要仅设置数据URI，调用setData()。要仅设置MIME类型，调用setType()。如果要同时设置，则应调用setDataAndType()，因为setData()和setType()会互相抵消彼此的值。
 * **Category**
 &emsp;&emsp;一个包含应处理Intent的组件的类别的附加信息的字符串。可以将任意数量的category放入一个Intent中，但大多数Intent均不需要类别。可以使用
 addCategory()来指定类别。可使用系统的标准类别或自定义的Category。  
@@ -54,7 +52,7 @@ Intent也有可能携带不影响解析应用组件的信息，如下：*
 &emsp;&emsp;隐式Intent指定能够在可以执行相应操作的设备上调用任何应用的操作。如果您的应用无法执行该操作而其他应用可以，且您希望用户选取要使用的应用，则使用隐式Intent
 非常有用。  
 &emsp;&emsp;例如，如果您希望用户与他人共享您的内容，请使用ACTION_SEND操作创建Intent，并添加指定共享内容的extra。使用该应用调用startActivity() 时，
-用户可以选取共享内容所使用的应用。在调用startActivity()应该用Intent的resolveActivity()来判断至少有一个应用可以处理该Intent。
+用户可以选取共享内容所使用的应用。在调用startActivity()应该用Intent的resolveActivity()来判断至少有一个应用可以处理该Intent。另外，PackageManager的query...()可以返回接受隐式Intent的所有组件，resolve...()可以返回接受隐式Intent的最佳组件。Intent的resolveActivity()内部就调用了PackageManager的resolveActivity()。
 ```
 // Create the text message with a string
 Intent sendIntent = new Intent();
@@ -100,6 +98,9 @@ if (sendIntent.resolveActivity(getPackageManager()) != null) {
 > **注意**：为了接收隐式Intent，**必须**将 CATEGORY_DEFAULT 类别包括在Intent过滤器中。方法 startActivity() 和 startActivityForResult()
 将按照Intent已经声明 CATEGORY_DEFAULT 类别的方式来处理所有Intent。如果未在Intent过滤器中声明此类别，则隐形Intent不会解析为您的Activity。
 > 对于所有Activity，必须在清单文件中声明Intent过滤器。但是广播接收器的过滤器可以在清单文件中声明，也可以通过调用代码注册。
+* ACTION_MAIN 操作指示这是主入口点，且不要求输入任何Intent数据。
+* CATEGORY_LAUNCHER 类别指示此Activity的图标应放入系统的应用启动器。如果 \<activity\> 元素未使用icon指定图标，则系统使用 \<application\> 
+元素中的图标。
 
 ## 使用pending intent
 &emsp;&emsp;PendingIntent对象是Intent对象的包装器。官网：PendingIntent的主要目的是授权外部应用使用包含的Intent，就像是它从应用本身的进程中执行的一样。
@@ -118,8 +119,41 @@ if (sendIntent.resolveActivity(getPackageManager()) != null) {
 &emsp;&emsp;当系统收到隐式Intent以启动Activity时，它根据以下三个方面将该Intent与Intent过滤器进行比较，搜索该Intent的最佳Activity：
 * **Action**
 &emsp;&emsp;\<intent-filter\>元素中必须至少包含一个\<action\>元素，如果\<intent-filter\>元素中没有\<action\>，那么过滤器不会接收任何隐式Intent。Intent的action必须存在且能够和过滤规则中的任何一个action相同即可匹配成功。
+******************
 * **Category** \<intent-filter\>元素中必须至少包含一个\<category android:name="android.intent.category.DEFAULT"/\>，否则无法接收任何隐式Intent。Intent如果设置了category，那么不管有几个，对于每个category来说，都必须是过滤器中声明了的某个category，过滤器声明的category数量可以多于Intent中指定的数量。由于系统调用startActivity()或者startActivityForResult()时会默认为Intent加上“android.intent.category.DEFAULT”这个category，且若要接收隐式Intent就必须在过滤器中加上"android.intent.category.DEFAULT"，所以Intent也可以不定义category，仍然可以匹配成功。
-* **Data**(URI和data type) Intent过滤器既可以不声明任何\<data\>元素，也可以声明多个此类元素。
+******************
+* **Data**(URI和data type) Intent过滤器既可以不声明任何\<data\>元素，也可以声明多个此类元素。Data由两部分组成，mimeType和URI。\<intent-filter\>中的\<data\>中可以只声明mimeType，也可以只声明URI，或者两者同时声明。  
+&emsp;&emsp;**mimeType** 指媒体类型，比如 image/jepg、audio/mpeg4-genric和video/*等，可以表示图片、文本、视频等不同的媒体格式。*表示任意MIME类型。
+&emsp;&emsp;**URI** 包含四个部分：scheme, host, port 和 path，host可以在第一个字符使用*通配符，pathPattern也可以使用*通配符。结构如下：
+```
+<scheme>://<host>:<port>[<path>|<pathPrefix>|<pathPattern>]
+```
+&emsp;&emsp;虽然每个属性是可选的，但它们存在相关性：
+* 如果没有指定scheme，则忽略所有其他URI属性，即整个URI无效。
+* 如果指定了scheme，但没有指定host，则忽略port和所有path属性。  
+
+&emsp;&emsp;将Intent中的URI与过滤器中的URI声明进行比较时，只将Intent的URI与过滤器中包含的URI的部分进行比较。例如：
+* 如果一个过滤器只声明了scheme，那么只要Intent的URI的scheme部分与之相同就能与过滤器匹配。
+* 如果过滤器指定了scheme、host和port但没有path，则Intent的URI的scheme、host和port部分与之相同都通过过滤器，而不管Intent的URI的path如何。
+* 如果过滤器指定scheme、host、port和path，则只有具有相同scheme、host、port和path的URI才能通过过滤器。  
+
+&emsp;&emsp;对Intent和过滤器中的URI和mimeType一起比较时，规则如下：
+1. 过滤器没有指定任何URI或MIME类型：不包含URI和MIME类型的Intent才会通过测试。
+2. 过滤器指定URI但没有指定MIME类型：包含URI但不包含MIME类型（既没有显式定义也不可从URI推导）的Intent在其URI与过滤器的URI格式匹配时通过测试
+3. 过滤器指定MIME类型但没有指定URI：包含相同MIME类型但不包含URI的Intent，或者包含相同MIME类型且URI的scheme为content:或file:则会通过测试。 换句话说，如果组件的过滤器仅列出MIME类型，则假定组件支持content：和file：。
+4. 过滤器同时指定URI和MIME类型：包含相同的MIME类型和URI的Intent才能通过测试。
+ 
+&emsp;&emsp;包含在同一个\<intent-filter\>元素中的所有\<data\>元素将组合在一起。例如以下代码，Intent中的URI和MIME类型只要存在于其中即可。
+intent.setDataAndType(Uri.parse("http://www.baidu.com"),"image/*");也能通过测试。
+```
+<activity android:name=".Main3Activity">
+     <intent-filter>
+         ...
+         <data android:scheme="http" android:mimeType="image/*"/>
+         <data android:scheme="tel" android:host="www.baidu.com" android:mimeType="audio/*"/>
+     </intent-filter>
+</activity>
+```
 
 > 可见：1.一个Activity只要能匹配任何一组intent-filter，即可成功启动对应的Activity； 2.要匹配任何一组intent-filter,就要同时匹配action，category和data才算是完全匹配； 另外在使用隐式调用要求IntentFilter必须定义action和category，data可以没有；其中 
 category android:name=”android.intent.category.DEFAULT”是一定要设置的。因为启动的时候Intent会默认加上这个category，否则的话无法启动。
