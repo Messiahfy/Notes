@@ -28,7 +28,7 @@ Activity B中调用setResult()。
 1. 资源相关的系统配置发生改变导致Activity被杀死并重新创建（如横竖旋转屏幕）
 2. 资源内存不足导致低优先级的Activity被杀死
 ### 保存和恢复Activity状态
-* 异常情况下，可通过onSaveInstanceState()存储数据，通过onCreate()或者onRestoreInstanceState()恢复数据（onCreate需要判空）。注意，只有在异常情况下，系统才会调用onSaveInstanceState()和onRestoreInstanceState()，正常的生命周期不会（如用户按了返回键或者调用了finish()方法就是正常生命周期）。  
+* 异常情况下，可通过onSaveInstanceState()存储数据，通过onCreate()或者onRestoreInstanceState()恢复数据（onCreate需要判空）。注意，只有在异常情况下，系统才会调用onSaveInstanceState()和onRestoreInstanceState()来恢复和存储数据，其他情况不会触发这个过程，但是按Home键或者启动新Activity仍然会单独触发onSaveInstanceState的调用。
 * 在异常情况1下，可以通过设定来禁止屏幕旋转等。  
 * 默认情况下，在onSaveInstanceState()和onRestoreInstanceState()方法中，系统自动为我们做了一定的恢复工作。当Activity在异常情况下需要重新创建时，系统会默认自动为我们保存当前Activity的视图结构，并且在Activity重启的时候恢复这些数据。系统统使用Bundle实例状态来保存活动布局中每个View对象的信息（如输入到EditText小部件中的文本值）。具体针对某一个特定的View系统能为我们恢复哪些数据，可以查看View源码，和Activity一样，每个View都有onSaveInstanceState()和onRestoreInstanceState()方法。
 * 关于保存和恢复View层次结构，系统的工作流程：Activity调用onSaveInstanceState()，然后Activity会委托Window去保存数据，接着Window委托顶级容器（DecorView）去保存数据，DecorView再一一通知子元素保存数据。onRestoreInstanceState()的过程类似。
