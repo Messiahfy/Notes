@@ -103,5 +103,75 @@ fragmentTransaction.commit();
 
 一旦您通过 FragmentTransaction 做出了更改，就必须调用 commit() 以使更改生效。
 
-* 添加没有 UI 的Fragment
+* 添加没有 UI 的Fragment  
 还可以使用Fragment为 Activity 提供后台行为，而不显示额外 UI
+
+要想添加没有 UI 的Fragment，请从 Activity 使用FragmentTransaction类的 add(Fragment, String) 方法添加Fragment（为Fragment提供一个唯一的字符串“tag”，而不是视图 ID）。这会添加Fragment，但由于它并不与 Activity 布局中的视图关联，因此不会收到对 onCreateView() 的调用。因此，您不需要实现该方法。
+
+并非只能为非 UI Fragment提供字符串标记 — 您也可以为具有 UI 的Fragment提供字符串标记 — 但如果片段没有 UI，则字符串标记将是标识它的唯一方式。如果您想稍后从 Activity 中获取片段，则需要使用 findFragmentByTag()。
+
+## 管理Fragment
+要想管理您的 Activity 中的Fragment，您需要使用 FragmentManager。要想获取它，请从您的 Activity 调用 getFragmentManager()。  
+
+可以使用 FragmentManager 执行的部分操作包括：
+* 通过 findFragmentById()（对于在 Activity 布局中提供 UI 的Fragment）或 findFragmentByTag()（对于提供或不提供 UI 的Fragment）获取 Activity 中存在的片段。
+* 通过 popBackStack()（模拟用户发出的返回命令）将Fragment从返回栈中弹出。
+* 通过 addOnBackStackChangedListener() 注册一个侦听返回栈变化的侦听器。
+
+也可以使用 FragmentManager 打开一个 FragmentTransaction，通过它来执行某些事务，如添加和移除片段。
+
+## 执行Fragment事务
+&emsp;&emsp;在 Activity 中使用片段的一大优点是，可以根据用户行为通过它们执行添加、移除、替换以及其他操作。 您提交给 Activity 的每组更改都称为事务，您可以使用 FragmentTransaction 中的 API 来执行一项事务。您也可以将每个事务保存到由 Activity 管理的返回栈内，从而让用户能够回退片段更改（类似于回退 Activity）。
+
+可以像下面这样从 FragmentManager 获取一个 FragmentTransaction 实例：
+```
+FragmentManager fragmentManager = getFragmentManager();
+FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+```
+每个事务都是您想要在同一时间执行的一组更改。您可以使用 add()、remove() 和 replace() 等方法为给定事务设置您想要执行的所有更改。然后，要想将事务应用到 Activity，您必须调用 commit()。
+
+不过，在您调用 commit() 之前，您可能想调用 addToBackStack()，以将事务添加到片段事务返回栈。 该返回栈由 Activity 管理，允许用户通过按返回按钮返回上一片段状态。
+
+例如，以下示例说明了如何将一个片段替换成另一个片段，以及如何在返回栈中保留先前状态：
+```
+// Create new fragment and transaction
+Fragment newFragment = new ExampleFragment();
+FragmentTransaction transaction = getFragmentManager().beginTransaction();
+
+// Replace whatever is in the fragment_container view with this fragment,
+// and add the transaction to the back stack
+transaction.replace(R.id.fragment_container, newFragment);
+transaction.addToBackStack(null);
+
+// Commit the transaction
+transaction.commit();
+```
+在上例中，newFragment 会替换目前在 R.id.fragment_container ID 所标识的布局容器中的任何Fragment（如有）。通过调用 addToBackStack() 可将替换事务保存到返回栈，以便用户能够通过按返回按钮撤消事务并回退到上一Fragment。
+
+如果您向事务添加了多个更改（如又一个 add() 或 remove()），并且调用了 addToBackStack()，则在调用 commit() 前应用的所有更改都将作为单一事务添加到返回栈，并且返回按钮会将它们一并撤消。
+
+向 FragmentTransaction 添加更改的顺序无关紧要，不过：
+* 您必须最后调用 commit()
+* 如果您要向同一容器添加多个Fragment，则您添加片段的顺序将决定它们在视图层次结构中的出现顺序
+
+如果您没有在执行移除Fragment的事务时调用 addToBackStack()，则事务提交时该Fragment会被销毁，用户将无法回退到该Fragment。 不过，如果您在删除Fragment时调用了 addToBackStack()，则Fragment会stopped，并在用户回退时将其resumed。
+
+> 提示：对于每个片段事务，您都可以通过在提交前调用 setTransition() 来应用过渡动画。
+
+调用 commit() 不会立即执行事务，而是在 Activity 的 UI 线程（“主”线程）可以执行该操作时再安排其在线程上运行。不过，如有必要，您也可以从 UI 线程调用 executePendingTransactions() 以立即执行 commit() 提交的事务。通常不必这样做，除非其他线程中的作业依赖该事务。
+
+> **注意**：您只能在 Activity 保存其状态（用户离开 Activity）之前使用 commit() 提交事务。如果您试图在该时间点后提交，则会引发异常。 这是因为如需恢复 Activity，则提交后的状态可能会丢失。 对于丢失提交无关紧要的情况，请使用 commitAllowingStateLoss()。
+
+## 与Activity通信
+尽管 Fragment 是作为独立于 Activity 的对象实现，并且可在多个 Activity 内使用，但片段的给定实例会直接绑定到包含它的 Activity。
+
+具体地说，片段可以通过 getActivity() 访问 Activity 实例，并轻松地执行在 Activity 布局中查找视图等任务。
+```
+View listView = getActivity().findViewById(R.id.list);
+```
+同样地，您的 Activity 也可以使用 findFragmentById() 或 findFragmentByTag()，通过从 FragmentManager 获取对 Fragment 的引用来调用Fragment中的方法。例如：
+```
+ExampleFragment fragment = (ExampleFragment) getFragmentManager().findFragmentById(R.id.example_fragment);
+```
+
+### 创建对Activity的事件回调
