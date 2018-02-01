@@ -1,22 +1,74 @@
-* [setContentView()](#setContentView())
+# Activity
+&emsp;&emsp;Activity类是Android应用的重要组成部分，Activity的启动和放置方式是平台应用模型的基本组成部分。 与使用main（）方法启动应用的编程范例不同，Android系统通过调用与其生命周期特定阶段相对应的特定回调方法在Activity实例中启动代码。  
+
+&emsp;&emsp;移动应用的体验与桌面应用的不同之处在于，用户与应用的交互并不总是从相同的地方开始。相反，用户的使用流程经常以非确定性的方式开始。例如，如果您从主屏幕打开电子邮件应用，则可能会看到一个电子邮件列表。相比之下，如果您使用的是社交媒体应用，然后启动您的电子邮件应用，您可以直接进入电子邮件应用的屏幕上撰写电子邮件。  
+
+&emsp;&emsp;Activity类是为了方便这个范例而设计的。当一个应用程序调用另一个应用程序时，调用者应用程序调用属于另一个应用程序的一个Activity，而不是调用整个应用程序。这样，Activity就成为应用程序与用户交互的入口点。
+
+&emsp;&emsp;每个activity都提供应用程序绘制其用户界面(UI)的窗口。这个窗口通常会充满屏幕，但也可小于屏幕并浮动在其他窗口之上。
+
+&emsp;&emsp;一个应用通常由多个彼此松散联系的 Activity 组成。 一般会指定应用中的某个 Activity 为“主”Activity，即首次启动应用时呈现给用户的那个 Activity。 而且每个 Activity 均可启动另一个 Activity，以便执行不同的操作。 每次新 Activity 启动时，前一 Activity 便会停止，但系统会在堆栈（“返回栈”）中保留该 Activity。 当新 Activity 启动时，系统会将其推送到返回栈上，并取得用户焦点。 返回栈遵循基本的“后进先出”堆栈机制，因此，当用户完成当前 Activity 并按“返回”按钮时，系统会从堆栈中将其弹出（并销毁），然后恢复前一 Activity。 （[任务和返回栈文档](https://developer.android.google.cn/guide/components/tasks-and-back-stack.html)中对返回栈有更详细的阐述。）
+
+&emsp;&emsp;当一个 Activity 因某个新 Activity 启动而停止时，系统会通过该 Activity 的生命周期回调方法通知其这一状态变化。Activity 因状态变化—系统是creat Activity、stop Activity、resume Activity 还是destroy Activity— 而收到的回调方法可能有若干种，每一种回调都会为您提供执行与该状态变化相应的特定操作的机会。 例如，停止时，您的 Activity 应释放任何大型对象，例如网络或数据库连接。 当 Activity 恢复时，您可以重新获取所需资源，并恢复执行中断的操作。 这些状态转变都是 Activity 生命周期的一部分。
+
+## 创建Activity
+要创建 Activity，您必须创建 Activity 的子类（或使用其现有子类）。您需要在子类中实现 Activity 在其生命周期的各种状态之间转变时（例如create Activity、stop Activity、resume Activity 或destroy Activity 时）系统调用的回调方法。
+
+## 在清单文件中声明Activity
+您必须在清单文件中声明您的 Activity，这样系统才能访问它。 要声明您的 Activity，请打开您的清单文件，并将 <activity> 元素添加为 <application> 元素的子项。例如：
+ ```
+ <manifest ... >
+  <application ... >
+      <activity android:name=".ExampleActivity" />
+      ...
+  </application ... >
+  ...
+</manifest >
+ ```
+android:name 属性是唯一必需的属性—它指定 Activity 的类名。您还可以在此元素中加入几个其他特性，以定义 Activity label、Activity icon或风格主题等用于设置 Activity UI 风格的属性。[\<activity\>详情](https://developer.android.google.cn/guide/topics/manifest/activity-element.html)
+
+**使用Intent Filter**
+\<activity\> 元素还可指定各种 Intent 过滤器—使用 \<intent-filter\> 元素—以声明其他应用组件隐式启动它的方法。  
+如果您打算让应用成为独立应用，不允许其他应用激活其 Activity，则您不需要任何其他 Intent 过滤器。而只应有一个Activity设定MAIN action和LAUNCHER category用于应用入口。
+
+
+
+
 
 ## setContentView()  
 setContentView()就是在DecorView（Activity的根视图，其根布局为垂直Linearlayout）的ContentView(Framelayout)中添加View或ViewGroup
 
+## 启动Activity
+调用startActivity()
+
 ## 启动Activity以返回结果
 Activity A中调用调用startActivityForResult()，且实现onActivityResult()回调方法。  
 Activity B中调用setResult()。
+> **注意**：B应该通过finish()结束后返回A，因为finish()方法中会设定resultCode。而按BACK键默认会将resultCode设为RESULT_CANCELED，可以重写onBackPressed()，主动调用finish()。
 
 ## 结束Activity
 1. 通过调用 Activity 的 finish() 方法来结束该 Activity。  
 2. 还可以通过调用 finishActivity() 结束之前通过startActivityForResult()启动的另一个 Activity。（疑问：已经跳转到activity B，若B没有销毁，则不会回调A的onActivityResult()，那么如何在activity A中执行finishActivity()。回答：目前测试可以在A中设定定时器，定时调用finishActivity()，其他方式和用途暂不了解）。
 
 ## 生命周期
+通过实现回调方法管理 Activity 的生命周期对开发强大而又灵活的应用至关重要。 Activity 的生命周期会直接受到 Activity 与其他 Activity、其任务及返回栈的关联性的影响。  
+
+Activity 基本上以三种状态（稳定态）存在：  
+**Resumed**：此Activity位于屏幕前台并具有用户焦点（有时也将此状态成为Running）  
+**Paused**：另一个 Activity 位于屏幕前台并具有用户焦点，但此 Activity 仍可见。也就是说，另一个 Activity 显示在此 Activity 上方，并且该 Activity 部分透明或未覆盖整个屏幕。 暂停的 Activity 处于完全活动状态（Activity 对象保留在内存中，它保留了所有状态和成员信息，并与窗口管理器保持连接），但在内存极度不足的情况下，可能会被系统终止。  
+**Stopped**：该 Activity 被另一个 Activity 完全遮盖（该 Activity 目前位于“后台”）。 已停止的 Activity 同样仍处于活动状态（Activity 对象保留在内存中，它保留了所有状态和成员信息，但未与窗口管理器连接）。 不过，它对用户不再可见，在他处需要内存时可能会被系统终止。
+
 ![官方Activity生命周期图](https://developer.android.google.cn/images/activity_lifecycle.png)
-* onStart()：即将出现在前台
-* onResume()：已经在前台，即将开始与用户交互
-* onPause()：失去焦点，但仍然部分可见
-* onStop()：不可见
+* onCreate()：必须实现此回调。创建 Activity 时调用。 应在此方法中执行整个生命周期中仅一次的基本的启动逻辑 — 创建视图、将数据绑定到列表、初始化后台线程、实例化变量等。系统向此方法传递一个 Bundle 对象，其中包含 Activity 的上一状态，不过前提是捕获了该状态。onCreate()始终后接onStart()。  
+* onRestart：在 Activity 已停止并即将再次启动前调用。始终后接 onStart()  
+* onStart()：当activity进入Started状态时，系统调用此回调。准备出现在前台  
+* onResume()：当activity进入Resumed状态时，系统调用此回调。已经在前台，即将开始与用户交互  
+* onPause()：失去焦点，但仍然部分可见。 此方法通常用于确认对持久性数据的未保存更改、停止动画以及其他可能消耗 CPU 的内容，诸如此类。 它应该非常迅速地执行所需操作，因为它返回后，下一个 Activity 才能继续执行。  
+* onStop()：对用户不可见时，系统调用此回调。此时应释放在大多数不可见时不需要的资源，例如取消广播注册。此时，activity仍保存在内存中，但是没有附属于window manager。系统仍然保持追踪布局中每个view的状态，所以不需要保存和恢复它。  
+* onDestroy()：在 Activity 被销毁前调用。这是 Activity 将收到的最后调用。应释放所有其他回调中没有释放的资源。
+
+## Activity状态和弹出内存
+系统不会直接杀死一个activity，而是杀死activity运行的进程，不仅销毁activity，而且销毁所有运行于此进程的
 
 ## Activity跳转的生命周期
 1. Activity A 的onPause()方法执行。
