@@ -81,9 +81,10 @@ true还是false，如果container为null，那么加载的布局的根视图的�
 当系统创建此 Activity 布局时，会实例化在布局中指定的每个Fragment，并为每个Fragment调用 onCreateView() 方法，以检索每个Fragment的布局。系统会直接
 插入Fragment返回的 View 来替代 \<fragment\> 元素。
 > **注**：每个Fragment都需要一个唯一的标识符，重启 Activity 时，系统可以使用该标识符来恢复片段（您也可以使用该标识符来获得Fragment以执行某些事务，如将其移除）。
-有两种方式为Fragment提供 ID：
+有三种方式为Fragment提供 ID：
 1. 为 android:id 属性提供唯一 ID。
 2. 为 android:tag 属性提供唯一字符串。
+3. 如果以上两个属性均未指定，则使用FragmentTransaction的add()方法时，第一个参数指定的Fragment的容器ID将作为Fragment的ID。（如果使用同一容器ID调用add()方法添加多个Fragment，则使用findFragmentById(容器ID)时将返回最后一个添加的Fragment实例）。
 
 * **或者通过编程方式将Fragment添加到某个存在的 ViewGroup**  
 您可以在 Activity 运行期间随时将Fragment添加到 Activity 布局中。您只需指定要将Fragment放入哪个 ViewGroup。
@@ -175,3 +176,19 @@ ExampleFragment fragment = (ExampleFragment) getFragmentManager().findFragmentBy
 ```
 
 ### 创建对Activity的事件回调
+在某些情况下，需要通过Fragment与Activity共享事件（还是Fragment中与Activity通信）。可以在Fragment内定义一个回调接口，并要求Activity实现它。  
+示例代码可参考[官网中Fragment的事件回调部分](https://developer.android.google.cn/guide/components/fragments.html#CommunicatingWithActivity)
+
+## 向应用栏（App Bar）中添加item
+Fragment可以通过实现 onCreateOptionsMenu() 向 Activity 的[选项菜单](https://developer.android.google.cn/guide/topics/ui/menus.html#options-menu)（并因此向App Bar）贡献菜单项。
+
+&emsp;&emsp;不过，为了使此方法能够收到调用，您必须在 Fragment 的 onCreate() 期间调用 setHasOptionsMenu()，以指示Fragment想要向选项菜单添加菜单项（否则，Fragment将不会收到对 onCreateOptionsMenu() 的调用）。
+
+&emsp;&emsp;从Fragment添加到选项菜单的任何菜单项都将追加到现有菜单项之后。 选定菜单项时，Fragment还会收到对 onOptionsItemSelected() 的回调。
+
+&emsp;&emsp;您还可以通过调用 registerForContextMenu()，在Fragment布局中注册一个视图来提供上下文菜单。用户打开上下文菜单时，Fragment会收到对 onCreateContextMenu() 的调用。当用户选择某个菜单项时，Fragment会收到对 onContextItemSelected() 的调用。
+> **注**：尽管 Fragment 会收到与其添加的每个菜单项对应的菜单项选定回调，但当用户选择菜单项时，Activity 会首先收到相应的回调。 如果 Activity 对on-item-selected 的回调的实现不处理选定的菜单项，则系统会将事件传递到Fragment的回调。 这适用于选项菜单和上下文菜单。
+
+关于菜单的更多信息，参考[菜单](https://developer.android.google.cn/guide/topics/ui/menus.html)指南和[应用栏\(App Bar\)](https://developer.android.google.cn/training/appbar/index.html)Training。
+
+## 处理Fragment的声明周期
