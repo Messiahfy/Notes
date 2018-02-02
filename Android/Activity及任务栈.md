@@ -31,10 +31,6 @@ android:name 属性是唯一必需的属性—它指定 Activity 的类名。您
 \<activity\> 元素还可指定各种 Intent 过滤器—使用 \<intent-filter\> 元素—以声明其他应用组件隐式启动它的方法。  
 如果您打算让应用成为独立应用，不允许其他应用激活其 Activity，则您不需要任何其他 Intent 过滤器。而只应有一个Activity设定MAIN action和LAUNCHER category用于应用入口。
 
-
-
-
-
 ## setContentView()  
 setContentView()就是在DecorView（Activity的根视图，其根布局为垂直Linearlayout）的ContentView(Framelayout)中添加View或ViewGroup
 
@@ -68,7 +64,12 @@ Activity 基本上以三种状态（稳定态）存在：  
 * onDestroy()：在 Activity 被销毁前调用。这是 Activity 将收到的最后调用。应释放所有其他回调中没有释放的资源。
 
 ## Activity状态和弹出内存
-系统不会直接杀死一个activity，而是杀死activity运行的进程，不仅销毁activity，而且销毁所有运行于此进程的
+系统不会直接杀死一个activity，而是杀死activity运行的进程，不仅销毁activity，而且销毁所有运行于此进程的内容。
+
+当系统需要释放内存时会杀死进程，杀死进程的可能性取决于当时进程的状态，而进程的状态受到其中的Activity状态的影响。
+用户也可以使用设置中的应用管理器关闭应用从而杀死进程。
+
+更多信息参考官网进程和线程的内容。
 
 ## Activity跳转的生命周期
 1. Activity A 的onPause()方法执行。
