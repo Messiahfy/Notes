@@ -59,8 +59,8 @@ Activity 基本上以三种状态（稳定态）存在：  
 * onRestart：在 Activity 已停止并即将再次启动前调用。始终后接 onStart()  
 * onStart()：当activity进入Started状态时，系统调用此回调。准备出现在前台  
 * onResume()：当activity进入Resumed状态时，系统调用此回调。已经在前台，即将开始与用户交互  
-* onPause()：失去焦点，但仍然部分可见。 此方法通常用于确认对持久性数据的未保存更改、停止动画以及其他可能消耗 CPU 的内容，诸如此类。 它应该非常迅速地执行所需操作，因为它返回后，下一个 Activity 才能继续执行。  
-* onStop()：对用户不可见时，系统调用此回调。此时应释放在大多数不可见时不需要的资源，例如取消广播注册。此时，activity仍保存在内存中，但是没有附属于window manager。系统仍然保持追踪布局中每个view的状态，所以不需要保存和恢复它。  
+* onPause()：失去焦点，但仍然部分可见。 此方法通常用于确认对持久性数据的未保存更改、停止动画以及其他可能消耗 CPU 的内容，诸如此类。 它应该非常迅速地执行所需操作，因为它返回后，下一个 Activity 才能继续执行。暂停的 Activity 处于完全活动状态（Activity 对象保留在内存中，它保留了所有状态和成员信息，并与Window Manager保持连接），但在内存极度不足的情况下，可能会被系统终止。  
+* onStop()：对用户不可见时，系统调用此回调。此时应释放在大多数不可见时不需要的资源，例如取消广播注册。此时，activity仍保存在内存中，但是没有附属于window manager。系统仍然保持追踪布局中每个view的状态，所以不需要保存和恢复它。已停止的 Activity 同样仍处于活动状态（Activity 对象保留在内存中，它保留了所有状态和成员信息，但未与Window Manager连接）。 在他处需要内存时可能会被系统终止。
 * onDestroy()：在 Activity 被销毁前调用。这是 Activity 将收到的最后调用。应释放所有其他回调中没有释放的资源。
 
 ## Activity状态和弹出内存
@@ -76,16 +76,26 @@ Activity 基本上以三种状态（稳定态）存在：  
 2. Activity B 的 onCreate(), onStart(), 和 onResume() 依次执行. (Activity B 现在获得用户焦点。)
 3. 然后，如何Activity A 在屏幕上不再可见, 它的 onStop() 方法执行。
 
-## 异常生命周期及保存和恢复Activity状态
+## 保存和恢复Activity状态
+&emsp;&emsp;当 Activity 暂停或停止时，Activity 的状态会得到保留。因为当 Activity 暂停或停止时，Activity 对象仍保留在内存中 — 有关其成员和当前状态的所有信息仍处于活动状态。 因此，用户在 Activity 内所做的任何更改都会得到保留，这样一来，当 Activity 返回前台（当它“Resume”）时，这些更改仍然存在。  
+
+&emsp;&emsp;但当Activity因用户按下“BACK”或Activity自行finish而被销毁时，系统不会保存该Activity的状态，因为该行为表示Activity不再需要。
+
+&emsp;&emsp;而当系统为了恢复内存或配置变更而销毁某项 Activity 时，尽管此实例被销毁，但系统会记住它存在过，且在用户返回此Activity时使用销毁时保存的数据集来重建新的实例对象。但用户并不知道系统销毁 Activity 后又对其进行了重建，因此他们很可能认为 Activity 状态毫无变化。因此需要重写onSaveInstanceState()保存Activity状态的信息。
+
+&emsp;&emsp;系统会先调用 onSaveInstanceState()，然后再使 Activity 变得易于销毁。系统会向该方法传递一个 Bundle，您可以在其中使用 putString() 和 putInt() 等方法以名称-值对形式保存有关 Activity 状态的信息。然后，如果系统终止您的应用进程，并且用户返回您的 Activity，则系统会重建该 Activity，并将 Bundle 同时传递给 onCreate() 和 onRestoreInstanceState()。您可以使用上述任一方法从 Bundle 提取您保存的状态并恢复该 Activity 状态。如果没有状态信息需要恢复，则传递给您的 Bundle 是空值（如果是首次创建该 Activity，就会出现这种情况）。
+> **注**：无法保证系统会在销毁您的 Activity 前调用 onSaveInstanceState()，因为存在不需要保存状态的情况（例如用户使用“返回”按钮离开您的 Activity 时，因为用户的行为是在显式关闭 Activity）。 如果系统调用 onSaveInstanceState()，它会在调用 onStop() 之前，并且可能会在调用 onPause() 之前进行调用。
+
 ### 异常生命周期情况
 1. 资源相关的系统配置发生改变导致Activity被杀死并重新创建（如横竖旋转屏幕）
 2. 资源内存不足导致低优先级的Activity被杀死
-### 保存和恢复Activity状态
+### 保存和恢复Activity状态的相关详情
 * 异常情况下，可通过onSaveInstanceState()存储数据，通过onCreate()或者onRestoreInstanceState()恢复数据（onCreate需要判空）。注意，只有在异常情况下，系统才会调用onSaveInstanceState()和onRestoreInstanceState()来恢复和存储数据，其他情况不会触发这个过程，但是按Home键或者启动新Activity仍然会单独触发onSaveInstanceState的调用。
-* 在异常情况1下，可以通过设定来禁止屏幕旋转等。  
-* 默认情况下，在onSaveInstanceState()和onRestoreInstanceState()方法中，系统自动为我们做了一定的恢复工作。当Activity在异常情况下需要重新创建时，系统会默认自动为我们保存当前Activity的视图结构，并且在Activity重启的时候恢复这些数据。系统统使用Bundle实例状态来保存活动布局中每个View对象的信息（如输入到EditText小部件中的文本值）。具体针对某一个特定的View系统能为我们恢复哪些数据，可以查看View源码，和Activity一样，每个View都有onSaveInstanceState()和onRestoreInstanceState()方法。
+* 即使什么都不做，也不实现 onSaveInstanceState() ，Activity类的onSaveInstanceState()和onRestoreInstanceState()方法的默认也会恢复部分 Activity 状态。Activity 类的 onSaveInstanceState() 默认实现具体地讲，默认实现会为布局中的每个 View 调用相应的 onSaveInstanceState() 方法，让每个视图都能提供有关自身的应保存信息，Android 框架中几乎每个小部件都会根据需要实现此方法，以便在重建 Activity 时自动保存和恢复对 UI 所做的任何可见更改。当Activity在异常情况下需要重新创建时，系统会默认自动为我们保存当前Activity的视图结构，并且在Activity重启的时候恢复这些数据。系统统使用Bundle实例状态来保存活动布局中每个View对象的信息（如输入到EditText小部件中的文本值）。具体针对某一个特定的View系统能为我们恢复哪些数据，可以查看View源码，和Activity一样，每个View都有onSaveInstanceState()和onRestoreInstanceState()方法。
 * 关于保存和恢复View层次结构，系统的工作流程：Activity调用onSaveInstanceState()，然后Activity会委托Window去保存数据，接着Window委托顶级容器（DecorView）去保存数据，DecorView再一一通知子元素保存数据。onRestoreInstanceState()的过程类似。
 * 虽然系统会自动保存和恢复一些数据，但某些数据仍需自行保存和恢复。Bundle不适合保存过多的数据，因为消耗内存。过多的数据可以考虑采取综合的方式，持久化存储、onSaveInstanceState()和ViewModel等。
+
+> **注**：由于无法保证系统会调用 onSaveInstanceState()，因此您只应利用它来记录 Activity 的瞬态（UI 的状态）— 切勿使用它来存储持久性数据，而应使用 onPause() 在用户离开 Activity 后存储持久性数据（例如应保存到数据库的数据）。
 
 ## 总结活动和任务的默认行为
 * 当 Activity A 启动 Activity B，Activity A停止，但系统保存A的状态（如滚动位置和输入到表单中的文本）。如果用户在活动B中按下后退按钮，则活动A将恢复其状态。
