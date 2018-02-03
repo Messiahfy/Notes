@@ -191,4 +191,35 @@ Fragment可以通过实现 onCreateOptionsMenu() 向 Activity 的[选项菜单](
 
 关于菜单的更多信息，参考[菜单](https://developer.android.google.cn/guide/topics/ui/menus.html)指南和[应用栏\(App Bar\)](https://developer.android.google.cn/training/appbar/index.html)Training。
 
-## 处理Fragment的声明周期
+## 处理Fragment的生命周期
+管理片段生命周期与管理 Activity 生命周期很相似。和 Activity 一样，片段也以三种状态存在：  
+**Resumed**  
+Fragment在运行中的 Activity 中可见。
+**Paused**  
+另一个 Activity 位于前台并具有焦点，但此片段所在的 Activity 仍然可见（前台 Activity 部分透明，或未覆盖整个屏幕）。
+**Stopped**  
+Fragment不可见。要么宿主 Activity 已停止，要么Fragment已从 Activity 中移除，但已被添加到返回栈。 停止Fragment仍然处于活动状态（系统会保留所有状态和成员信息）。 不过，它对用户不再可见，而且如果 Activity 被杀死，它也会被杀死。  
+![官方Fragment生命周期图](https://developer.android.google.cn/images/fragment_lifecycle.png)
+&emsp;&emsp;与 Activity 一样，假使 Activity 的进程被杀死，而您需要在重建 Activity 时恢复Fragment状态，您也可以使用 Bundle 保留Fragment的状态。您可以在Fragment的 onSaveInstanceState() 回调期间保存状态，并可在 onCreate()、onCreateView() 或 onActivityCreated() 期间恢复状态。  
+
+&emsp;&emsp;Activity 生命周期与Fragment生命周期之间的最显著差异在于它们在其各自返回栈中的存储方式。 默认情况下，Activity 停止时会被放入由系统管理的 Activity 返回栈（以便用户通过返回按钮回退到 Activity，任务和返回栈对此做了阐述）。不过，只有当您在移除Fragment的事务执行期间通过调用 addToBackStack() 显式请求保存实例时，系统才会将Fragment放入由宿主 Activity 管理的返回栈。  
+> **注意**：如需 Fragment 内的某个 Context 对象，可以调用 getActivity()。但要注意，请仅在Fragment附加到 Activity 时调用 getActivity()。如果Fragment尚未附加，或在其生命周期结束期间分离，则 getActivity() 将返回 null。
+
+### 与 Activity 生命周期协调
+![Activity生命周期对Fragment生命周期的影响](https://developer.android.google.cn/images/activity_fragment_lifecycle.png)  
+Fragment所在的 Activity 的生命周期会直接影响Fragment的生命周期，其表现为，Activity 的每次生命周期回调都会引发每个Fragment的类似回调。 例如，当 Activity 收到 onPause() 时，Activity 中的每个Fragment也会收到 onPause()。  
+
+不过，Fragment还有几个额外的生命周期回调，用于处理与 Activity 的唯一交互，以执行构建和销毁Fragment UI 等操作。 这些额外的回调方法是：
+* onAttach() 在片段已与 Activity 关联时调用（Activity 传递到此方法内）。
+* onCreateView() 调用它可创建与片段关联的视图层次结构。
+* onActivityCreated() 在 Activity 的 onCreate() 方法已返回时调用。
+* onDestroyView() 在移除与片段关联的视图层次结构时调用。
+* onDetach() 在取消片段与 Activity 的关联时调用。  
+
+上图所示说明了受其宿主 Activity 影响的Fragment生命周期流。在该图中，您可以看到 Activity 的每个连续状态如何决定Fragment可以收到的回调方法。 例如，当 Activity 收到其 onCreate() 回调时，Activity 中的Fragment只会收到 onActivityCreated() 回调。  
+
+一旦 Activity 达到Resumed状态，您就可以随意向 Activity 添加Fragment和移除其中的Fragment。 因此，只有当 Activity 处于Resumed状态时，Fragment的生命周期才能独立变化。  
+
+不过，当 Activity 离开Resumed状态时，Fragment会在 Activity 的推动下再次经历其生命周期。
+
+[官方Fragment示例](https://developer.android.google.cn/guide/components/fragments.html#Example)
