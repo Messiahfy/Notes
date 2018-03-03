@@ -195,22 +195,21 @@ registerReceiver(receiver, filter, Manifest.permission.SEND_SMS, null );
 注册声明。有时，Android系统本身会强制使用上下文注册的接收器。例如，CONNECTIVITY_ACTION广播仅传递给上下文注册的接收器。
 
 * 不要使用隐式Intent广播敏感信息。任何注册的应用程序都可以读取信息以接收广播。有三种方法可以控制谁可以接收您的广播：
- * 您可以在发送广播时指定权限。
- * 在Android 4.0及更高版本中，您可以在发送广播时使用setPackage（String）指定一个包。系统将广播限制为与包匹配的一组应用程序。
- * 您可以使用LocalBroadcastManager发送本地广播。
+  * 您可以在发送广播时指定权限。
+  * 在Android 4.0及更高版本中，您可以在发送广播时使用setPackage（String）指定一个包。系统将广播限制为与包匹配的一组应用程序。
+  * 您可以使用LocalBroadcastManager发送本地广播。
  
 * 当您注册接收器时，任何应用程序都可能将潜在的恶意广播发送到您应用的接收器。有三种方法可以限制您的应用收到的广播：
- * 您可以在注册广播接收机时指定权限。
- * 对于清单声明的接收者，您可以在清单中将android：exported属性设置为“false”。接收器不接收来自应用程序外部的广播。
- * 您只能使用LocalBroadcastManager将自己限制为本地广播。
+  * 您可以在注册广播接收机时指定权限。
+  * 对于清单声明的接收者，您可以在清单中将android：exported属性设置为“false”。接收器不接收来自应用程序外部的广播。
+  * 您只能使用LocalBroadcastManager将自己限制为本地广播。
  
 * 广播操作的命名空间是全局的。确保action名称和其他字符串被写入您拥有的名称空间中，否则您可能会无意中与其他应用程序发生冲突。
 
-* 因为接收者的onReceive（Context，Intent）方法在主线程上运行，所以它应该快速执行并返回。如果您需要执行长时间运行的工作，请注意产生线程或启动后台服务
-，因为系统会在onReceive（）返回后终止整个进程。有关更多信息，请参阅对进程状态的影响来执行长时间运行的工作，我们建议：
- * 在接收器的onReceive（）方法中调用goAsync（）并将BroadcastReceiver.PendingResult传递给后台线程。这使从onReceive（）返回后的广播保持活动状态。但是，
+* 因为接收者的onReceive（Context，Intent）方法在主线程上运行，所以它应该快速执行并返回。如果您需要执行长时间运行的工作，请注意产生线程或启动后台服务，因为系统会在onReceive（）返回后终止整个进程。有关更多信息，请参阅对进程状态的影响来执行长时间运行的工作，我们建议：
+  * 在接收器的onReceive（）方法中调用goAsync（）并将BroadcastReceiver.PendingResult传递给后台线程。这使从onReceive（）返回后的广播保持活动状态。但是，
 即使采用这种方法，系统也希望您能够很快完成广播（不到10秒）。它确实允许您将工作移至另一个线程以避免妨碍主线程。
- * 使用JobScheduler调度工作。有关更多信息，请参阅智能作业计划。
+  * 使用JobScheduler调度工作。有关更多信息，请参阅智能作业计划。
  
 * 不要从广播接收机开始活动，因为用户体验很刺耳;特别是如果有多个接收器的话。相反，请考虑显示通知。
 
