@@ -87,8 +87,9 @@ Activity 基本上以三种状态（稳定态）存在：  
 > **注**：无法保证系统会在销毁您的 Activity 前调用 onSaveInstanceState()，因为存在不需要保存状态的情况（例如用户使用“返回”按钮离开您的 Activity 时，因为用户的行为是在显式关闭 Activity）。 如果系统调用 onSaveInstanceState()，它会在调用 onStop() 之前，并且可能会在调用 onPause() 之前进行调用。
 
 ### 异常生命周期情况
-1. 资源相关的系统配置发生改变导致Activity被杀死并重新创建（如横竖旋转屏幕）
-2. 资源内存不足导致低优先级的Activity被杀死
+1. 资源相关的系统配置发生改变导致Activity被销毁并重新创建（如横竖旋转屏幕）  
+> &emsp;&emsp;配置变更导致的activity重建可以通过设置清单文件中的<activity>的android:configChanges来避免。列出 Activity 将自行处理的配置更改。在运行时发生配置更改时，默认情况下会关闭 Activity 然后将其重新启动，但使用该属性声明配置将阻止 Activity 重新启动。 Activity 反而会保持运行状态，并且系统会调用其 onConfigurationChanged() 方法。由于activity不会重新创建，**默认**也就不会应用新的资源文件，例如横屏时并不会应用layout-land中的布局。
+2. 资源内存不足导致低优先级的Activity所在进程被杀死
 ### 保存和恢复Activity状态的相关详情
 * 异常情况下，可通过onSaveInstanceState()存储数据，通过onCreate()或者onRestoreInstanceState()恢复数据（onCreate需要判空）。注意，只有在异常情况下，系统才会调用onSaveInstanceState()和onRestoreInstanceState()来恢复和存储数据，其他情况不会触发这个过程，但是按Home键或者启动新Activity仍然会单独触发onSaveInstanceState的调用。
 * 即使什么都不做，也不实现 onSaveInstanceState() ，Activity类的onSaveInstanceState()和onRestoreInstanceState()方法的默认也会恢复部分 Activity 状态。Activity 类的 onSaveInstanceState() 默认实现具体地讲，默认实现会为布局中的每个 View 调用相应的 onSaveInstanceState() 方法，让每个视图都能提供有关自身的应保存信息，Android 框架中几乎每个小部件都会根据需要实现此方法，以便在重建 Activity 时自动保存和恢复对 UI 所做的任何可见更改。当Activity在异常情况下需要重新创建时，系统会默认自动为我们保存当前Activity的视图结构，并且在Activity重启的时候恢复这些数据。系统统使用Bundle实例状态来保存活动布局中每个View对象的信息（如输入到EditText小部件中的文本值）。具体针对某一个特定的View系统能为我们恢复哪些数据，可以查看View源码，和Activity一样，每个View都有onSaveInstanceState()和onRestoreInstanceState()方法。
