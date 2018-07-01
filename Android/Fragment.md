@@ -51,8 +51,8 @@ public static class ExampleFragment extends Fragment {
 inflate()方法带有三个参数：
 * 想要加载的布局的资源ID
 * 如果第三个参数为true，加载的布局将加入到ViewGroup(container)，container将作为加载的布局的父布局，且inflate()方法将返回container。如果第三个参数为
-false，第一个参数指定的布局文件将被加载，并作为inflate()的返回值。传递 container 对系统为加载的布局的根视图设定布局参数具有重要意义，不论第三个参数是
-true还是false，如果container为null，那么加载的布局的根视图的布局参数layout_width和layout_height都将作为wrap_content来处理（个人测试所得）。
+false，第一个参数指定的布局文件将被加载，并作为inflate()的返回值，但加载的视图并不会插入container中，而需要自己调用父布局的addView手动插入。传递 container 对系统为加载的布局的根视图设定布局参数具有重要意义，不论第三个参数是
+true还是false，如果container为null，那么加载的视图的布局参数LayoutParams，例如layout_width和layout_height都将使用默认参数。但可以自己为视图调用setLayoutParams来主动设定布局参数，而避免没有传入container的情况下使用了默认参数。
 * 指示加载的布局是否应该加入到ViewGroup(第二个参数)。在本例中，其值为 false，因为系统已经将加载的布局插入 container — 传递 true 值会在最终布局中创建
 一个多余的view group。
 
