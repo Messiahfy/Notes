@@ -320,7 +320,7 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
         return result;
     }
 ```
-**恢复**源码分析：在FragmentActivity的onCreate(Bundle savedInstanceState)中调用了mFragments.restoreAllState方法，最终调用到FragmentManagerImpl的restoreAllState方法。
+**恢复**源码分析：在FragmentActivity的onCreate(Bundle savedInstanceState)中调用了mFragments.restoreAllState方法（onCreate最后会调用mFragments.dispatchCreate()方法，重走Fragment生命周期），最终调用到FragmentManagerImpl的restoreAllState方法。
 ```
     void restoreAllState(Parcelable state, FragmentManagerNonConfig nonConfig) {
         ......
