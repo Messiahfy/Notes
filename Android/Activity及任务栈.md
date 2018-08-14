@@ -92,7 +92,7 @@ Activity 基本上以三种状态（稳定态）存在：  
 2. 资源内存不足导致低优先级的Activity所在进程被杀死
 ### 保存和恢复Activity状态的相关详情
 * 异常情况下，可通过onSaveInstanceState()存储数据，通过onCreate()或者onRestoreInstanceState()恢复数据（onCreate需要判空）。注意，只有在异常情况下，系统才会调用onSaveInstanceState()和onRestoreInstanceState()来恢复和存储数据，其他情况不会触发这个过程，但是按Home键或者启动新Activity仍然会单独触发onSaveInstanceState的调用。
-* 即使什么都不做，也不实现 onSaveInstanceState() ，Activity类的onSaveInstanceState()和onRestoreInstanceState()方法的默认也会恢复部分 Activity 状态。Activity 类的 onSaveInstanceState() 默认实现具体地讲，默认实现会为布局中的每个 View 调用相应的 onSaveInstanceState() 方法，让每个视图都能提供有关自身的应保存信息，Android 框架中几乎每个小部件都会根据需要实现此方法，以便在重建 Activity 时自动保存和恢复对 UI 所做的任何可见更改。当Activity在异常情况下需要重新创建时，系统会默认自动为我们保存当前Activity的视图结构，并且在Activity重启的时候恢复这些数据。系统统使用Bundle实例状态来保存活动布局中每个View对象的信息（如输入到EditText小部件中的文本值）。具体针对某一个特定的View系统能为我们恢复哪些数据，可以查看View源码，和Activity一样，每个View都有onSaveInstanceState()和onRestoreInstanceState()方法。
+* 即使什么都不做，也不实现 onSaveInstanceState() ，Activity类的onSaveInstanceState()和onRestoreInstanceState()方法的默认也会恢复部分 Activity 状态。Activity 类的 onSaveInstanceState() 默认实现具体地讲，默认实现会为布局中的每个 View 调用相应的 onSaveInstanceState() 方法，让每个视图都能提供有关自身的应保存信息，Android 框架中几乎每个小部件都会根据需要实现此方法，以便在重建 Activity 时自动保存和恢复对 UI 所做的任何可见更改。当Activity在异常情况下需要重新创建时，系统会默认自动为我们保存当前Activity的视图结构，并且在Activity重启的时候恢复这些数据。系统统使用Bundle实例状态来保存活动布局中每个View对象的信息（如输入到EditText小部件中的文本值）,但只会**自动**恢复设置了id的view的状态，除非在Activity的onSaveInstanceState()和onRestoreInstanceState()中自行设置bundle。具体针对某一个特定的View系统能为我们恢复哪些数据，可以查看View源码，和Activity一样，每个View都有onSaveInstanceState()和onRestoreInstanceState()方法。
 * 关于保存和恢复View层次结构，系统的工作流程：Activity调用onSaveInstanceState()，然后Activity会委托Window去保存数据，接着Window委托顶级容器（DecorView）去保存数据，DecorView再一一通知子元素保存数据。onRestoreInstanceState()的过程类似。
 * 虽然系统会自动保存和恢复一些数据，但某些数据仍需自行保存和恢复。Bundle不适合保存过多的数据，因为消耗内存。过多的数据可以考虑采取综合的方式，持久化存储、onSaveInstanceState()和ViewModel等。
 
