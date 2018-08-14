@@ -129,7 +129,7 @@ fragmentTransaction.commit();
 FragmentManager fragmentManager = getFragmentManager();
 FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 ```
-每个事务都是您想要在同一时间执行的一组更改。您可以使用 add()、remove() 和 replace() 等方法为给定事务设置您想要执行的所有更改。然后，要想将事务应用到 Activity，您必须调用 commit()。
+每个事务都是您想要在同一时间执行的一组更改。您可以使用 add()、remove() 和 replace() 等方法为给定事务设置您想要执行的所有更改。然后，要想将事务应用到 Activity，您必须调用 commit()。detach()会执行到onPause()-->onStop()-->onDestroyView()，不会执行到onDestroy()，onDetach()。
 
 不过，在您调用 commit() 之前，您可能想调用 addToBackStack()，以将事务添加到片段事务返回栈。 该返回栈由 Activity 管理，允许用户通过按返回按钮返回上一片段状态。
 
