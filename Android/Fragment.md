@@ -205,6 +205,216 @@ Fragment不可见。要么宿主 Activity 已停止，要么Fragment已从 Activ
 &emsp;&emsp;Activity 生命周期与Fragment生命周期之间的最显著差异在于它们在其各自返回栈中的存储方式。 默认情况下，Activity 停止时会被放入由系统管理的 Activity 返回栈（以便用户通过返回按钮回退到 Activity，任务和返回栈对此做了阐述）。不过，只有当您在移除Fragment的事务执行期间通过调用 addToBackStack() 显式请求保存实例时，系统才会将Fragment放入由宿主 Activity 管理的返回栈。  
 > **注意**：如需 Fragment 内的某个 Context 对象，可以调用 getActivity()。但要注意，请仅在Fragment附加到 Activity 时调用 getActivity()。如果Fragment尚未附加，或在其生命周期结束期间分离，则 getActivity() 将返回 null。
 
+## Fragment的状态保存与恢复
+**保存**源码分析： 在FragmentActivity的onSaveInstanceState()方法中：
+```
+protected void onSaveInstanceState(Bundle outState) {
+    super.onSaveInstanceState(outState);
+    markFragmentsCreated();
+    Parcelable p = mFragments.saveAllState();
+    if (p != null) {
+        outState.putParcelable(FRAGMENTS_TAG, p);
+    }
+    ......省略后面
+    }
+```
+mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
+```
+    Parcelable saveAllState() {
+        ......
+        //mActive为存储Fragment的键值对
+        if (mActive == null || mActive.size() <= 0) {
+            return null;
+        }
+
+        // First collect all active fragments.
+        int N = mActive.size();
+        //创建FragmentState数组
+        FragmentState[] active = new FragmentState[N];
+        boolean haveFragments = false;
+        for (int i=0; i<N; i++) {
+            Fragment f = mActive.valueAt(i);  //遍历每个Fragment
+            if (f != null) {
+                ......
+                FragmentState fs = new FragmentState(f);  
+                active[i] = fs;  //创建FragmentState对象，存在前面创建的数组中，FragmentState中包含了Bundle mArguments
+                                 //和Bundle mSavedFragmentState等数据。mArguments用于Fragment.setArguments()和
+                                 //Fragment.setArguments()，mSavedFragmentState用于onSaveInstanceState()和on...。
+
+                if (f.mState > Fragment.INITIALIZING && fs.mSavedFragmentState == null) {
+                    fs.mSavedFragmentState = saveFragmentBasicState(f);  //设置Bundle mSavedFragmentState，调用了saveFragmentBasicState()
+
+                    if (f.mTarget != null) {
+                        ......
+                        if (fs.mSavedFragmentState == null) {
+                            fs.mSavedFragmentState = new Bundle();
+                        }
+                        putFragment(fs.mSavedFragmentState,
+                                FragmentManagerImpl.TARGET_STATE_TAG, f.mTarget);
+                        if (f.mTargetRequestCode != 0) {
+                            fs.mSavedFragmentState.putInt(
+                                    FragmentManagerImpl.TARGET_REQUEST_CODE_STATE_TAG,
+                                    f.mTargetRequestCode);
+                        }
+                    }
+
+                } else {
+                    fs.mSavedFragmentState = f.mSavedFragmentState;
+                }
+            }
+        }
+
+        if (!haveFragments) {
+            if (DEBUG) Log.v(TAG, "saveAllState: no fragments!");
+            return null;
+        }
+        ......
+        FragmentManagerState fms = new FragmentManagerState();
+        fms.mActive = active;  //将active数组存入FragmentManagerState对象，返回。active数组中包含了每个Fragment的mArgument                                                  //和mSavedFragmentState
+        fms.mAdded = added;  //保存已经add的Fragment
+        fms.mBackStack = backStack;  //保存返回栈
+        if (mPrimaryNav != null) {
+            fms.mPrimaryNavActiveIndex = mPrimaryNav.mIndex;
+        }
+        fms.mNextFragmentIndex = mNextFragmentIndex;
+        saveNonConfig();
+        return fms;  //返回的值将保存到Activity的Bundle中
+    }
+```
+在saveFragmentBasicState()中：
+```
+    Bundle saveFragmentBasicState(Fragment f) {
+        Bundle result = null;
+
+        if (mStateBundle == null) {
+            mStateBundle = new Bundle();
+        }
+        //其中会调用Fragment的onSaveInstanceState(Bundle outState)方法
+        f.performSaveInstanceState(mStateBundle);
+        dispatchOnFragmentSaveInstanceState(f, mStateBundle, false);
+        if (!mStateBundle.isEmpty()) {
+            // 确实有保存的东西则设置result
+            result = mStateBundle;
+            mStateBundle = null;
+        }
+        // 保存fragment view树的状态
+        if (f.mView != null) {
+            saveFragmentViewState(f);
+        }
+        if (f.mSavedViewState != null) {
+            if (result == null) {
+                result = new Bundle();
+            }
+            // 将view树的状态作为一个key、value放到result中
+            result.putSparseParcelableArray(
+                    FragmentManagerImpl.VIEW_STATE_TAG, f.mSavedViewState);
+        }
+        if (!f.mUserVisibleHint) {
+            if (result == null) {
+                result = new Bundle();
+            }
+            // Only add this if it's not the default value
+            result.putBoolean(FragmentManagerImpl.USER_VISIBLE_HINT_TAG, f.mUserVisibleHint);
+        }
+
+        return result;
+    }
+```
+**恢复**源码分析：在FragmentActivity的onCreate(Bundle savedInstanceState)中调用了mFragments.restoreAllState方法，最终调用到FragmentManagerImpl的restoreAllState方法。
+```
+    void restoreAllState(Parcelable state, FragmentManagerNonConfig nonConfig) {
+        ......
+        //先获取到保存的FragmentManagerState对象
+        FragmentManagerState fms = (FragmentManagerState)state;
+        if (fms.mActive == null) return;
+
+        List<FragmentManagerNonConfig> childNonConfigs = null;
+        List<ViewModelStore> viewModelStores = null;
+
+        // First re-attach any non-config instances we are retaining back
+        // to their saved state, so we don't try to instantiate them again.
+        if (nonConfig != null) {
+            List<Fragment> nonConfigFragments = nonConfig.getFragments();
+            childNonConfigs = nonConfig.getChildNonConfigs();
+            viewModelStores = nonConfig.getViewModelStores();
+            final int count = nonConfigFragments != null ? nonConfigFragments.size() : 0;
+            for (int i = 0; i < count; i++) {
+                Fragment f = nonConfigFragments.get(i);
+                if (DEBUG) Log.v(TAG, "restoreAllState: re-attaching retained " + f);
+                int index = 0; // index into fms.mActive
+                while (index < fms.mActive.length && fms.mActive[index].mIndex != f.mIndex) {
+                    index++;
+                }
+                if (index == fms.mActive.length) {
+                    throwException(new IllegalStateException("Could not find active fragment "
+                            + "with index " + f.mIndex));
+                }
+                FragmentState fs = fms.mActive[index];
+                fs.mInstance = f;
+                f.mSavedViewState = null;
+                f.mBackStackNesting = 0;
+                f.mInLayout = false;
+                f.mAdded = false;
+                f.mTarget = null;
+                if (fs.mSavedFragmentState != null) {
+                    fs.mSavedFragmentState.setClassLoader(mHost.getContext().getClassLoader());
+                    f.mSavedViewState = fs.mSavedFragmentState.getSparseParcelableArray(
+                            FragmentManagerImpl.VIEW_STATE_TAG);
+                    f.mSavedFragmentState = fs.mSavedFragmentState;
+                }
+            }
+        }
+
+        // Build the full list of active fragments, instantiating them from
+        // their saved state.
+        mActive = new SparseArray<>(fms.mActive.length);
+        for (int i=0; i<fms.mActive.length; i++) {
+            FragmentState fs = fms.mActive[i];
+            if (fs != null) {
+                FragmentManagerNonConfig childNonConfig = null;
+                if (childNonConfigs != null && i < childNonConfigs.size()) {
+                    childNonConfig = childNonConfigs.get(i);
+                }
+                ViewModelStore viewModelStore = null;
+                if (viewModelStores != null && i < viewModelStores.size()) {
+                    viewModelStore = viewModelStores.get(i);
+                }
+                Fragment f = fs.instantiate(mHost, mContainer, mParent, childNonConfig,
+                        viewModelStore);  //实例化Fragment
+                if (DEBUG) Log.v(TAG, "restoreAllState: active #" + i + ": " + f);
+                mActive.put(f.mIndex, f);
+                // Now that the fragment is instantiated (or came from being
+                // retained above), clear mInstance in case we end up re-restoring
+                // from this FragmentState again.
+                fs.mInstance = null;
+            }
+        }
+
+        // Update the target of all retained fragments.
+        if (nonConfig != null) {
+            ......
+        }
+
+        // Build the list of currently added fragments.
+        mAdded.clear();
+        if (fms.mAdded != null) {
+            ......
+        }
+
+        // Build the back stack.
+        if (fms.mBackStack != null) {
+            ......
+        } else {
+            mBackStack = null;
+        }
+
+        if (fms.mPrimaryNavActiveIndex >= 0) {
+            mPrimaryNav = mActive.get(fms.mPrimaryNavActiveIndex);
+        }
+        this.mNextFragmentIndex = fms.mNextFragmentIndex;
+    }
+```
+Activity会自动重建Fragment，Fragment会重走完整生命周期。如果Fragment调用了setRetainInstance，则只会onDestroyView()，不会onDestroy()和onDetach()。
 ### 与 Activity 生命周期协调
 ![Activity生命周期对Fragment生命周期的影响](https://developer.android.google.cn/images/activity_fragment_lifecycle.png)  
 Fragment所在的 Activity 的生命周期会直接影响Fragment的生命周期，其表现为，Activity 的每次生命周期回调都会引发每个Fragment的类似回调。 例如，当 Activity 收到 onPause() 时，Activity 中的每个Fragment也会收到 onPause()。  
