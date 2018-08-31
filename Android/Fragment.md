@@ -130,7 +130,7 @@ FragmentManager fragmentManager = getFragmentManager();
 FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 ```
 每个事务都是您想要在同一时间执行的一组更改。您可以使用 **add()**、**remove()** 和 **replace()** 等方法为给定事务设置您想要执行的所有更改。然后，要想将事务应用到 Activity，您必须调用 commit()。    
-**detach()** 会执行到onPause()-->onStop()-->onDestroyView()，不会执行到onDestroy()，onDetach()。对应的 **attach()** 从onCreateView()开始执行到onResume()。    
+**detach()** 会执行到onPause()-->onStop()-->onDestroyView()，不会执行到onDestroy()，onDetach()。对应的 **attach()** 从onCreateView()开始执行到onResume()。这两个方法只是销毁和重建fragment的视图层次结构，并不会销毁fragment对象本身。    
 hide()和show()只是隐藏和显示，并不影响生命周期。
 
 不过，在您调用 commit() 之前，您可能想调用 addToBackStack()，以将事务添加到片段事务返回栈。 该返回栈由 Activity 管理，允许用户通过按返回按钮返回上一片段状态。
