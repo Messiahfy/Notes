@@ -9,8 +9,8 @@ Activity 被销毁时，所有片段也会被销毁。 不过，当 Activity 正
 片段事务（后退）。  
 
 &emsp;&emsp;当您将片段作为 Activity 布局的一部分添加时，它存在于 Activity 视图层次结构的某个 ViewGroup 内部，并且片段会定义其自己的视图布局。您可以通过在 Activity
-的布局文件中声明片段，将其作为 \<fragment\> 元素插入您的 Activity 布局中，或者通过将其添加到某个现有 ViewGroup，利用应用代码进行插入。    
-不过，片段并非必须
+的布局文件中声明片段，将其作为 \<fragment\> 元素插入您的 Activity 布局中，或者通过将其添加到某个现有 ViewGroup，利用应用代码进行插入。        
+&emsp;&emsp;不过，片段并非必须
 成为 Activity 布局的一部分；您还可以将没有自己 UI 的片段用作 Activity 的不可见工作线程，比如用于请求权限，fragment可以像activity一样直接请求权限，且可以像activity一样重写请求权限回调，使用fragment封装请求权限功能，就不用在每个activity都重写一次权限请求回调了，其他类似的fragment和activity都有的回调均可如此。
 
 ## 创建Fragment
