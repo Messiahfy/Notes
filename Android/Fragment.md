@@ -11,7 +11,7 @@ Activity 被销毁时，所有片段也会被销毁。 不过，当 Activity 正
 &emsp;&emsp;当您将片段作为 Activity 布局的一部分添加时，它存在于 Activity 视图层次结构的某个 ViewGroup 内部，并且片段会定义其自己的视图布局。您可以通过在 Activity
 的布局文件中声明片段，将其作为 \<fragment\> 元素插入您的 Activity 布局中，或者通过将其添加到某个现有 ViewGroup，利用应用代码进行插入。        
 &emsp;&emsp;不过，片段并非必须
-成为 Activity 布局的一部分；您还可以将没有自己 UI 的片段用作 Activity 的不可见工作线程，比如用于请求权限，fragment可以像activity一样直接请求权限，且可以像activity一样重写请求权限回调，使用fragment封装请求权限功能，就不用在每个activity都重写一次权限请求回调了，其他类似的fragment和activity都有的回调均可如此。
+成为 Activity 布局的一部分；您还可以将没有自己 UI 的片段用作 Activity 的不可见工作线程，比如用于请求权限，fragment可以像activity一样直接请求权限，并重写请求权限回调，使用fragment封装请求权限功能，就不用在每个activity都重写一次权限请求回调了，其他类似的fragment和activity都有的回调均可如此。
 
 ## 创建Fragment
 &emsp;&emsp;要想创建片段，您必须创建 Fragment（或已有其子类）的子类。Fragment 类的代码与 Activity 非常相似。它包含与 Activity 类似的回调方法，如 onCreate()、
@@ -132,7 +132,7 @@ FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 ```
 &emsp;&emsp;每个事务都是您想要在同一时间执行的一组更改。您可以使用 **add()**、**remove()** 和 **replace()** 等方法为给定事务设置您想要执行的所有更改。然后，要想将事务应用到 Activity，您必须调用 commit()。    
 &emsp;&emsp; **detach()** 会执行到onPause()-->onStop()-->onDestroyView()，不会执行到onDestroy()，onDetach()。对应的 **attach()** 从onCreateView()开始执行到onResume()。这两个方法只是销毁和重建fragment的视图层次结构，并不会销毁fragment对象本身。    
-&emsp;&emsp;hide()和show()只是隐藏和显示，并不影响生命周期。
+&emsp;&emsp;hide()和show()只是隐藏和显示，并不影响生命周期，但是会回调onHiddenChanged(boolean hidden)方法。
 
 &emsp;&emsp;不过，在您调用 commit() 之前，您可能想调用 addToBackStack()，以将事务添加到片段事务返回栈。 该返回栈由 Activity 管理，允许用户通过按返回按钮返回上一片段状态。
 
@@ -244,6 +244,8 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
                 active[i] = fs;  //创建FragmentState对象，存在前面创建的数组中，FragmentState中包含了Bundle mArguments
                                  //和Bundle mSavedFragmentState等数据。mArguments用于Fragment.setArguments()和
                                  //Fragment.setArguments()，mSavedFragmentState用于onSaveInstanceState()和on...。
+                                 //上面的FragmentState构造函数获取了Fragment的Arguments和tag等信息，下面的saveFragmentBasicState方法
+                                 //获取mSavedFragmentState，saveFragmentBasicState方法在后面有源码
 
                 if (f.mState > Fragment.INITIALIZING && fs.mSavedFragmentState == null) {
                     fs.mSavedFragmentState = saveFragmentBasicState(f);  //设置Bundle mSavedFragmentState，调用了saveFragmentBasicState()
@@ -274,7 +276,8 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
         }
         ......
         FragmentManagerState fms = new FragmentManagerState();
-        fms.mActive = active;  //将active数组存入FragmentManagerState对象，返回。active数组中包含了每个Fragment的mArgument                                                  //和mSavedFragmentState
+        fms.mActive = active;  //将active数组存入FragmentManagerState对象，返回。active数组中就是FragmentState类型的数组，每个FragmentState
+                               //对应包含了一个Fragment的mArgument、tag、mRetainInstance等和mSavedFragmentState
         fms.mAdded = added;  //保存已经add的Fragment
         fms.mBackStack = backStack;  //保存返回栈
         if (mPrimaryNav != null) {
@@ -418,9 +421,9 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
         this.mNextFragmentIndex = fms.mNextFragmentIndex;
     }
 ```
-Activity会自动重建Fragment，Fragment会重走完整生命周期。如果Fragment调用了setRetainInstance，则只会onDestroyView()和onDetach()，不会onDestroy()，重建时调用onAttach()和onActivityCreated()，不会调用onCreate()。    
+**Fragment重建的重点** Activity会自动重建Fragment，Fragment会重走完整生命周期。但如果Fragment调用了setRetainInstance，则只会onDestroyView()和onDetach()，不会onDestroy()，重建时调用onAttach()和onActivityCreated()，不会调用onCreate()。    
 因为重建后的Fragment是一个新的对象，可以通过FragmentManager的putFragment()和getFragment()方法配合使用，用于获取重建的那个Fragment对象。
-### 与 Activity 生命周期协调
+## 与 Activity 生命周期协调
 ![Activity生命周期对Fragment生命周期的影响](https://developer.android.google.cn/images/activity_fragment_lifecycle.png)  
 Fragment所在的 Activity 的生命周期会直接影响Fragment的生命周期，其表现为，Activity 的每次生命周期回调都会引发每个Fragment的类似回调。 例如，当 Activity 收到 onPause() 时，Activity 中的每个Fragment也会收到 onPause()。  
 
