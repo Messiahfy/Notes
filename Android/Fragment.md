@@ -421,7 +421,7 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
         this.mNextFragmentIndex = fms.mNextFragmentIndex;
     }
 ```
-**Fragment重建的重点** Activity会自动重建Fragment，Fragment会重走完整生命周期。但如果Fragment调用了setRetainInstance，则只会onDestroyView()和onDetach()，不会onDestroy()，重建时调用onAttach()和onActivityCreated()，不会调用onCreate()。    
+**Fragment重建的重点** Activity会自动重建Fragment，Fragment会重走完整生命周期。但如果Fragment调用了setRetainInstance（配置变更有效，但若activity被kill，则无效），则只会onDestroyView()和onDetach()，不会onDestroy()，重建时调用onAttach()和onActivityCreated()，不会调用onCreate()。    
 因为重建后的Fragment是一个新的对象，可以通过FragmentManager的putFragment()和getFragment()方法配合使用，用于获取重建的那个Fragment对象。
 ## 与 Activity 生命周期协调
 ![Activity生命周期对Fragment生命周期的影响](https://developer.android.google.cn/images/activity_fragment_lifecycle.png)  
