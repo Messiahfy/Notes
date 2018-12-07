@@ -422,7 +422,7 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
     }
 ```
 **Fragment重建的重点** Activity会自动重建Fragment，Fragment会重走完整生命周期。但如果Fragment调用了setRetainInstance（配置变更有效，但若activity被kill，则无效），则只会onDestroyView()和onDetach()，不会onDestroy()，重建时调用onAttach()和onActivityCreated()，不会调用onCreate()。    
-因为重建后的Fragment是一个新的对象，可以通过FragmentManager的putFragment()和getFragment()方法配合使用，用于获取重建的那个Fragment对象。
+因为自动重建后的Fragment是一个新的对象，重建时应该让对象变量引用这个重建的Fragment，而不是再去创建一个新的（会造成存在两个Fragment），如果Fragment有用id或者tag标记，那么可以在Activity的onCreat()或者onRestoreInstanceState()使用id或者tag获取到重建的Fragment对象，但如果既没有id又没有tag，比如在ViewPager中使用的情况，那么可以通过FragmentManager的putFragment()和getFragment()方法配合使用，用于获取重建的那个Fragment对象。
 ## 与 Activity 生命周期协调
 ![Activity生命周期对Fragment生命周期的影响](https://developer.android.google.cn/images/activity_fragment_lifecycle.png)  
 Fragment所在的 Activity 的生命周期会直接影响Fragment的生命周期，其表现为，Activity 的每次生命周期回调都会引发每个Fragment的类似回调。 例如，当 Activity 收到 onPause() 时，Activity 中的每个Fragment也会收到 onPause()。  
