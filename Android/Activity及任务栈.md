@@ -121,7 +121,8 @@ Activity 基本上以三种状态（稳定态）存在：  
 &emsp;&emsp;Android浏览器应用应用声明网络浏览器Activity应该始终在浏览器应用自己的任务栈打开。  
   
 &emsp;&emsp;由于singleTask的性质，会存在这样的情况。目前有两个任务栈，前台任务栈为1和2，后台任务栈为X和Y，且Y的启动模式为singleTask。若从前台任务栈启动Y，那么Y所在的整个任务栈都会被带到前台。（从singleTask的单实例且仅属于一个任务栈的性质，可以看出，若不将同任务栈的X一起带到前台，则Y或者X的任务栈将改变）  
-&emsp;&emsp;下图如果是启动X，且X为singleTask，则X上的Y将出栈，只将X带到前台。
+**下图如果是启动X，且X为singleTask，则X上的Y将出栈，只将X带到前台。（似乎可用于清空某个Activity之上的所有Activity）**
+
 ![singleTask特定情况图](https://developer.android.google.cn/images/fundamentals/diagram_backstack_singletask_multiactivity.png)
 
 ### 使用Intent flags
