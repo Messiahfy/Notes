@@ -15,7 +15,7 @@
 &emsp;&emsp;Intent过滤器是清单文件中的一个表达式，它指定组件要接收的Intent类型。通过对组件声明Intent过滤器，可以使其他应用能够直接使用某一特定类型
 的Intent启动组件。
 如果没有为组件声明任何Intent过滤器，则组件只能使用显式Intent启动。
-> **注意**：为确保安全性，启动Service时，最好使用显式Intent。从Android 5.0（API 21）开始，如果使用隐式Intent调用bindService(),系统会引发异常。
+> **注意**：为确保安全性，启动Service时，最好使用显式Intent。从Android 5.0（API 21）开始，如果使用隐式Intent调用bindService(),系统会引发异常。（Component由Package和Class组成，Intent只要包含了Package或者既有Package又有Class则为显式Intent）
 
 ## 构建Intent
 &emsp;&emsp;Intent对象携带了Android系统用来确定要启动哪个组件的信息（例如，准确的组件名称（**Component name**）或应当接收该Intent的组件类别(**Category**)）
