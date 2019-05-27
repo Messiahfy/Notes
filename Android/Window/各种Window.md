@@ -1,7 +1,7 @@
 ![Android系统Window层级](https://upload-images.jianshu.io/upload_images/3468445-467e8bdf84cca4ea.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
 
-PopupWindow用的是子Window，也就是另外的DecorView
+PopupWindow没有创建Window，只是创建了新的的DecorView
 
 Dialog用的单独的PhoneWindow，为应用程序Window，也是另外的DecorView
 
