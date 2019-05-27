@@ -1,0 +1,20 @@
+# 1.概述
+运输层的主要协议：
+1. 用户数据报协议UDP（User Datagram Protocol）
+2. 传输控制协议TCP（Transmission Control Protocol）
+
+![TCP/IP体系中的运输层协议](https://upload-images.jianshu.io/upload_images/3468445-f07a951524522a49.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+&emsp;&emsp;UDP在传输数据前不需要先建立连接。
+&emsp;&emsp;TCP则提供面向连接的服务。
+
+TCP/IP的运输层用一个16位**端口号**来标志一个端口，端口号只具有本地意义。**服务端使用的端口号** 0~49151，**客户端使用的端口号** 49152~65535 仅在客户进程运行时动态选择。
+
+# 2.TCP
+套接字 socket = (IP 地址：端口号)
+### 2.1 可靠传输的原理
+###### 2.1.1 停止等待协议
+每发送完一个数据单元就停止发送，等待对方的确认，在收到确认后再发送下一个数据单元。
+
+###### 2.1.2 滑动窗口协议
+由于停止等待协议的信道利用率太低

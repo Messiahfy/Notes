@@ -1,0 +1,1 @@
+设计师使用Adobe After Effects（AE）设计动画，然后通过 Bodymovin 插件进行简单的转换和导出成 JSON，然后将JSON文件放到项目中，使用Lottie库使用即可。
