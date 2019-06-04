@@ -16,14 +16,25 @@ Android应用可以发送或接收来自Android系统和其他Android应用的�
 有关系统广播操作的完整列表，请参阅Android SDK中的BROADCAST_ACTIONS.TXT文件。 每个广播action都有一个与其相关的常量字段。 例如，常量
 ACTION_AIRPLANE_MODE_CHANGED的值是android.intent.action.AIRPLANE_MODE。 每个广播action的文档可在其关联的常量字段中找到。
 
-### 系统广播的变化
+## 系统广播的变化
+随着Android平台的发展，它会定期更改系统广播的行为方式。如果您的应用针对Android 7.0（API级别24）或更高版本，或者如果它安装在运行Android 7.0或更高版本的设备上，请记住以下更改。
+
+#### Android 9
+从Android 9（API级别28）开始，NETWORK_STATE_CHANGED_ACTION广播不会接收有关用户位置或个人身份识别数据的信息。
+
+此外，如果您的应用安装在运行Android 9或更高版本的设备上，则来自Wi-Fi的系统广播不包含SSID，BSSID，连接信息或扫描结果。要获取此信息，请调用getConnectionInfo()。
+
+#### Android 8.0
+从Android 8.0（API级别26）开始，系统对清单声明的广播接收器施加了额外的限制。
+
+如果您的应用针对的是Android 8.0或更高版本，则无法使用清单为大多数隐式广播（不是专门针对您的应用的广播）声明广播接收器。
+当用户主动使用您的应用时，您仍然可以使用上下文注册的广播接收器。
+
+#### Android 7.0
 Android 7.0及更高版本不再发送以下系统广播。 此优化会影响所有应用，而不仅仅是针对Android 7.0的应用。
 * ACTION_NEW_PICTURE
 * ACTION_NEW_VIDEO  
-面向Android 7.0（API级别24）及更高级别的应用必须使用registerReceiver（BroadcastReceiver，IntentFilter）注册以下广播。 在清单中声明接收者不起作用。
-* CONNECTIVITY_ACTION  
-
-从Android 8.0（API级别26）开始，系统对清单声明的接收方施加额外的限制。 如果您的应用定位到API级别26或更高级别，则无法使用清单为大多数隐式广播（不是专门针对您的应用的广播）声明接收方。
+面向Android 7.0（API级别24）及更高级别的应用必须使用registerReceiver（BroadcastReceiver，IntentFilter）注册 CONNECTIVITY_ACTION 广播。 在清单中声明广播接收者不起作用。
 
 ## （接收广播）Receiving broadcasts  
 应用程序可以通过两种方式接收广播：通过清单声明的接收器和上下文注册（动态代码注册）的接收器。
@@ -97,7 +108,7 @@ this.registerReceiver(br, filter);
 于其他更重要的进程。  
 
 出于这个原因，您不应该从广播接收器开始长时间运行后台线程。 在onReceive（）之后，系统可以随时终止进程以回收内存，并且这样做会终止在进程中运行的衍生线
-程。 为了避免这种情况，您应该调用goAsync（）（如果您需要更多时间在后台线程中处理广播）或使用JobScheduler从接收方调度JobService，那么系统知道该进程
+程。 为了避免这种情况，您应该调用goAsync（）（如果您需要更多时间在后台线程中处理广播）或使用JobScheduler从广播接收器调度JobService，那么系统知道该进程
 继续执行活动 工作。 有关更多信息，请参阅进程和应用程序生命周期。  
 
 以下代码片段显示了一个BroadcastReceiver，它使用goAsync（）来标记onReceive（）完成后需要更多时间才能完成。 如果你想在你的onReceive（）中完成的工作
