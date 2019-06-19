@@ -217,11 +217,29 @@ protected void onSaveInstanceState(Bundle outState) {
     markFragmentsCreated();
     Parcelable p = mFragments.saveAllState();
     if (p != null) {
-        outState.putParcelable(FRAGMENTS_TAG, p);
+        outState.putParcelable(FRAGMENTS_TAG, p);//Fragment保存的信息都会保存到Activity的Bundle中
     }
     ......省略后面
     }
 ```
+FragmentState类包含以下字段：
+```
+    final String mClassName;
+    final int mIndex;
+    final boolean mFromLayout;
+    final int mFragmentId;
+    final int mContainerId;
+    final String mTag;
+    final boolean mRetainInstance;
+    final boolean mDetached;
+    final Bundle mArguments;
+    final boolean mHidden;
+
+    Bundle mSavedFragmentState;
+
+    Fragment mInstance;
+```
+
 mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
 ```
     Parcelable saveAllState() {
@@ -233,7 +251,7 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
 
         // First collect all active fragments.
         int N = mActive.size();
-        //创建FragmentState数组
+        //创建FragmentState的active数组，循环中会将fragment的自身各种数据都保存于其中
         FragmentState[] active = new FragmentState[N];
         boolean haveFragments = false;
         for (int i=0; i<N; i++) {
@@ -248,7 +266,7 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
                                  //获取mSavedFragmentState，saveFragmentBasicState方法在后面有源码
 
                 if (f.mState > Fragment.INITIALIZING && fs.mSavedFragmentState == null) {
-                    fs.mSavedFragmentState = saveFragmentBasicState(f);  //设置Bundle mSavedFragmentState，调用了saveFragmentBasicState()
+                    fs.mSavedFragmentState = saveFragmentBasicState(f);  //设置Bundle mSavedFragmentState，调用了saveFragmentBasicState()，保存onSaveInstanceState(Bundle outState)方法保存的数据和视图树状态信息数据。
 
                     if (f.mTarget != null) {
                         ......
@@ -274,7 +292,7 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
             if (DEBUG) Log.v(TAG, "saveAllState: no fragments!");
             return null;
         }
-        ......
+        ......//省略代码：保存已添加的fragment的索引到added数组，保存回退栈数据到backStack数组
         FragmentManagerState fms = new FragmentManagerState();
         fms.mActive = active;  //将active数组存入FragmentManagerState对象，返回。active数组中就是FragmentState类型的数组，每个FragmentState
                                //对应包含了一个Fragment的mArgument、tag、mRetainInstance等和mSavedFragmentState
@@ -284,11 +302,11 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
             fms.mPrimaryNavActiveIndex = mPrimaryNav.mIndex;
         }
         fms.mNextFragmentIndex = mNextFragmentIndex;
-        saveNonConfig();
+        saveNonConfig();//保存设置了RetainInstance的Fragment对象
         return fms;  //返回的值将保存到Activity的Bundle中
     }
 ```
-在saveFragmentBasicState()中：
+在saveFragmentBasicState()中：保存了开发者主动保存的数据、视图树状态数据等
 ```
     Bundle saveFragmentBasicState(Fragment f) {
         Bundle result = null;
@@ -296,15 +314,16 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
         if (mStateBundle == null) {
             mStateBundle = new Bundle();
         }
-        //其中会调用Fragment的onSaveInstanceState(Bundle outState)方法
+        //其中会调用Fragment的onSaveInstanceState(Bundle outState)方法，包括嵌套的子Fragment
         f.performSaveInstanceState(mStateBundle);
+        //回调为FragmentManager注册的Fragment声明周期监听
         dispatchOnFragmentSaveInstanceState(f, mStateBundle, false);
         if (!mStateBundle.isEmpty()) {
-            // 确实有保存的东西则设置result
+            // 开发者在onSaveInstanceState(Bundle outState)方法回调时有保存数据，则设置result为保存了数据后的bundle
             result = mStateBundle;
             mStateBundle = null;
         }
-        // 保存fragment view树的状态
+        // 保存fragment view树的状态，即调用View的onSaveInstanceState()保存View的状态信息
         if (f.mView != null) {
             saveFragmentViewState(f);
         }
@@ -327,7 +346,10 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
         return result;
     }
 ```
-**恢复**源码分析：在FragmentActivity的onCreate(Bundle savedInstanceState)中调用了mFragments.restoreAllState方法（onCreate最后会调用mFragments.dispatchCreate()方法，重走Fragment生命周期），最终调用到FragmentManagerImpl的restoreAllState方法。
+最终返回给Activity的保存信息结构如图：
+![保存的Fragments数据图](https://github.com/Messiahfy/Notes/blob/master/Android/图片/Fragment状态保存信息.png?raw=true)
+
+**恢复**源码分析：在Activity的onCreate(Bundle savedInstanceState)中调用了mFragments.restoreAllState方法（onCreate最后会调用mFragments.dispatchCreate()方法，重走Fragment生命周期），最终调用到FragmentManagerImpl的restoreAllState方法。FragmentManagerImpl的restoreAllState()方法恢复数据后，Activity会调用FragmentController的dispatchCreate()方法使Fragment进入生命周期。
 ```
     void restoreAllState(Parcelable state, FragmentManagerNonConfig nonConfig) {
         ......
