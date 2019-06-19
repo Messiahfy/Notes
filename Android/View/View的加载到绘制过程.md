@@ -83,3 +83,5 @@ void doTraversal() {
 
 
 **绘制流程中注意的是**，`view`的`onMeasure`只管自己，`ViewGroup`还要管子`view`。`view`一般不用重写`onLayout`，`ViewGroup`需要在`onLayout`中调用子`View`的`layout`为其设置布局位置。`view`重写`onDraw`绘制，`ViewGroup`一般不用重写`onDraw`。
+
+> 测量、布局、绘制的具体过程在自定义View中描述
