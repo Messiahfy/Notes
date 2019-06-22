@@ -1,3 +1,4 @@
+[死磕Android_View工作原理你需要知道的一切](https://blog.csdn.net/xfhy_/article/details/90270630)
 ## 1.概述
 &emsp;&emsp;`Activity`的启动过程分为两种，一种是根`Activity`的启动过程，另一种是普通`Activity`的启动过程，根`Activity`指的是应用程序启动的第一个`Activity`，因此根`Activity`的启动过程一般情况下也可以理解为应用程序的启动过程（包含了进程的创建）。普通`Activity`指的是除了应用程序启动的第一个`Activity`之外的其他的`Activity`。
 

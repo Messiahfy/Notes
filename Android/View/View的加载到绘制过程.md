@@ -1,3 +1,4 @@
+[死磕Android_View工作原理你需要知道的一切](https://blog.csdn.net/xfhy_/article/details/90270630)
 ## 1.view的加载方式
 1. 开发者直接使用构造函数
 2. 使用`layoutInflater.inflate`方法加载`xml`（内部通过xml分析节点名，最终通过反射方式创建view对象，还是会调用构造函数）
