@@ -10,12 +10,16 @@
 2. `PhoneWindow的setContentView()`方法中调用了`LayoutInflater`的`inflate()`方法来填充布局，创建`DecorView`并作为`root`
 3. `LayoutInflater`的`inflate()`方法递归分析完xml标签树，完成所有`view`的创建和设置，此时每个`view`的对象和其`layoutParams`都已创建（`layoutParams`由`LayoutInflater`内部根据`view`的`xml`属性生成的`AttributeSet`中的相关信息而构造）。核心代码如下：
 ```
+//LayoutInflater.rInflate()方法内的部分关键代码
 final View view = createViewFromTag(parent, name, context, attrs);  //构造view
 final ViewGroup viewGroup = (ViewGroup) parent;  //view的父view
 final ViewGroup.LayoutParams params = viewGroup.generateLayoutParams(attrs);  //根据attrs为view构造LayoutParams
 rInflateChildren(parser, view, attrs, true);  //继续加载view 的子view
 viewGroup.addView(view, params);  //调用addView把view添加到viewGroup
 ```
+先构造实例，再构造`LayoutParams`，然后递归加载`children`，加载后将自己加入到`parent`布局中。所以自定义View用于XML中时，在构造函数中不要设置自身的`LayoutParams`，因为会被后续覆盖；<br/>
+而在代码中创建View时则需自行创建`LayoutParams`，否则父布局会创建默认的；自定义View中构造函数添加的`children`比XML中写的`children`先添加；
+
 > **总结**：`onCreate()`中调用`setContentView()`，会创建好所有`View`对象，但要`onResume()`之后才开始绘制。
 ## 3.测量、布局、绘制
 `View`的绘制（包含`measure`、`layout`、`draw`）是由`ViewRootImpl`来负责的。每个应用程序窗口的`decorView`都有一个与之关联的`ViewRootImpl`对象。
