@@ -1,0 +1,7 @@
+DialogFragment是一个持有dialog的无界面Fragment
+
+重写onCreateView()返回的视图将被用于dialog
+
+onCreateDialog()有默认实现，可以自行决定是否重写
+
+DialogFragment也可以当普通fragment来用，这时就不要调用它的show方法，而是像普通fragment一样使用就行

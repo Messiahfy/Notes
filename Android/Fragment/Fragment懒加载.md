@@ -85,3 +85,5 @@ ParentFragment1显示时，会预加载ParentFragment2，ParentFragment2会走�
 对于可见状态的生命周期调用顺序，父 Fragment总是优先于子 Fragment，而对于不可见事件，内部的 Fragment 生命周期总是先于外层 Fragment。（网友所言，待测试）
 
 > 懒加载实质上就是判断第一次对用户实质可见的情况，根据业务情况还可以根据以上所有分析来得出切换界面的每次可见和不可见的状态
+
+[Fragment懒加载实现](https://juejin.im/post/5adcb0e36fb9a07aa7673fbc)
