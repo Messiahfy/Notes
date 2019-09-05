@@ -109,8 +109,9 @@ view.startAnimation(animation);
 &#160; &#160; &#160; &#160;`Interpolator`的继承关系图如下：
 ![Interpolator继承关系图](https://upload-images.jianshu.io/upload_images/3468445-e93fe18072cf6f73.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 &#160; &#160; &#160; &#160;在视图动画中一般常用的是`BaseInterpolator`的子类。
+
 #### 6.视图动画原理
-&#160; &#160; &#160; &#160;`View`的`startAnimation`方法如下，关键是`invalidate(true)`
+&#160; &#160; &#160; &#160;`View`的`startAnimation`方法如下，设置了动画，且调用了`invalidate(true)`
 ```
     public void startAnimation(Animation animation) {
         animation.setStartTime(Animation.START_ON_FIRST_FRAME);
@@ -132,6 +133,18 @@ if (a != null) {
     transformToApply = parent.getChildTransformation();
 } 
 ......
+可见，在绘制的时候会判断动画不会空，调用`applyLegacyAnimation(...)`方法，其中会调用如下：
+```
+...
+final Transformation t = parent.getChildTransformation();
+boolean more = a.getTransformation(drawingTime, t, 1f);//调用animation的getTransformation方法
+...
+```
+animation的getTransformation方法则会调用到`Animation`类的`applyTransformation`方法，此方法是`Animation`的子类都要重写的。  
+此方法用于设置传入的`Transformation`的矩阵或者`alpha`。所以视图动画实质都是用来操作`Transfomation`对象中的矩阵和alpha值，
+
+最终得到的`transformToApply`，其中包含矩阵变换和alpha值的信息，后续代码会使用`transformToApply`用于  
+`canvas`的矩阵变换和透明度变化。补间动画其实只是调整了子view画布canvas的坐标系，其实并没有修改任何属性，所以只能在原位置才能处理触摸事件
 ```
 ## 7.视图动画的其他应用
 ----------------------------------------------
