@@ -53,7 +53,7 @@ inflate()方法带有三个参数：
 * 想要加载的布局的资源ID
 * 如果第三个参数为true，加载的布局将加入到ViewGroup(container)，container将作为加载的布局的父布局，且inflate()方法将返回container。如果第三个参数为
 false，第一个参数指定的布局文件将被加载，并作为inflate()的返回值，但加载的视图并不会插入container中，而需要自己调用父布局的addView手动插入。传递 container 对系统为加载的布局的根视图设定布局参数具有重要意义，不论第三个参数是
-true还是false，如果container为null，那么加载的视图不会被设置布局参数LayoutParams，因为系统解析该xml文件时并不知道它的父布局是什么类型，所以就不会为它设定LayoutParams，即使它设置了layout_width等属性。但可以自己为视图调用setLayoutParams来主动设定布局参数，而避免没有传入container参数的情况下添加到某布局而被设定默认布局参数。
+true还是false，如果container为null，那么加载的布局的根视图不会被设置布局参数LayoutParams（布局文件中的非根视图仍会被设置），因为系统解析该xml文件时并不知道它的父布局是什么类型，所以就不会为它设定LayoutParams，即使它设置了layout_width等属性。但可以自己为视图调用setLayoutParams来主动设定布局参数，而避免没有传入container参数的情况下添加到某布局而被设定默认布局参数。
 * 指示加载的布局是否应该加入到ViewGroup(第二个参数)。在本例中，其值为 false，因为系统已经将加载的布局插入 container — 传递 true 值会在最终布局中创建
 一个多余的view group。
 
@@ -259,7 +259,7 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
             if (f != null) {
                 ......
                 FragmentState fs = new FragmentState(f);  
-                active[i] = fs;  //创建FragmentState对象，存在前面创建的数组中，FragmentState中包含了Bundle mArguments
+                active[i] = fs;  //创建FragmentState对象，存储于前面创建的数组中，FragmentState中包含了Bundle mArguments
                                  //和Bundle mSavedFragmentState等数据。mArguments用于Fragment.setArguments()和
                                  //Fragment.setArguments()，mSavedFragmentState用于onSaveInstanceState()和on...。
                                  //上面的FragmentState构造函数获取了Fragment的Arguments和tag等信息，下面的saveFragmentBasicState方法
