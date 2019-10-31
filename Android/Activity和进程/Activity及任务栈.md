@@ -194,3 +194,11 @@ Activity 基本上以三种状态（稳定态）存在：  
 #### 保留已完成的任务
 &emsp;&emsp;如果想将任务保留在概览屏幕中，即使其Activity已经结束（finished），可在启动Activity的Intent的addFlags()方法中使用FLAG_ACTIVITY_RETAIN_IN_RECENTS。  
 &emsp;&emsp;要达到同样的效果，可以将<activity>属性android:autoRemoveFromRecents设置为false。文档Activity的默认值为true，常规Activity的默认值为false。此属性将覆盖FLAG_ACTIVITY_RETAIN_IN_RECENTS。
+
+## 任务栈在Framework中的形式
+
+* 一个Activity实例对应一个ActivityRecord，ActivityRecord是Activity在system_server进程中的镜像
+* TaskRecord表示任务栈，记录了多个ActivityRecord
+* ActivityStack用于管理多个TaskRecord任务栈
+* ActivityDisplay表示一个屏幕（主屏幕，外接屏幕，虚拟屏幕，一般只有主屏幕），是ActivityStackSupervisor的工具类
+* ActivityStackSupervisor是ActivityStack的实际管理者，内部有mHomeStack、mFocusedStack和mLastFocusedStack三个ActivityStack，实际一个ActivityStack应该就够了，但是ActivityStack被分类为多种
