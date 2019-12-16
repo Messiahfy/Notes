@@ -445,6 +445,53 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
 ```
 **Fragment重建的重点** Activity会自动重建Fragment，Fragment会重走完整生命周期。但如果Fragment调用了setRetainInstance（配置变更有效，但若activity被kill，则无效），则只会onDestroyView()和onDetach()，不会onDestroy()，重建时调用onAttach()和onActivityCreated()，不会调用onCreate()。    
 因为自动重建后的Fragment是一个新的对象，重建时应该让对象变量引用这个重建的Fragment，而不是再去创建一个新的（会造成存在两个Fragment），如果Fragment有用id或者tag标记，那么可以在Activity的onCreat()或者onRestoreInstanceState()使用id或者tag获取到重建的Fragment对象，但如果既没有id又没有tag，比如在ViewPager中使用的情况，那么可以通过FragmentManager的putFragment()和getFragment()方法配合使用，用于获取重建的那个Fragment对象。
+
+## FragmentManager也会保存和恢复Fragment内View的状态
+Fragment回退栈离开和返回上一Fragment时
+
+保存
+        at com.cvte.tv.setting.view.CRecyclerView.onSaveInstanceState(CRecyclerView.java:40)
+        at android.view.View.dispatchSaveInstanceState(View.java:18516)
+        at android.view.ViewGroup.dispatchFreezeSelfOnly(ViewGroup.java:3816)
+        at android.support.v7.widget.RecyclerView.dispatchSaveInstanceState(RecyclerView.java:1249)
+        at android.view.ViewGroup.dispatchSaveInstanceState(ViewGroup.java:3802)
+        at android.view.View.saveHierarchyState(View.java:18499)
+        at android.support.v4.app.FragmentManagerImpl.saveFragmentViewState(FragmentManager.java:2594)
+        at android.support.v4.app.FragmentManagerImpl.moveToState(FragmentManager.java:1378)
+        at android.support.v4.app.FragmentManagerImpl.moveFragmentToExpectedState(FragmentManager.java:1528)
+        at android.support.v4.app.BackStackRecord.executeOps(BackStackRecord.java:753)
+        at android.support.v4.app.FragmentManagerImpl.executeOps(FragmentManager.java:2363)
+        at android.support.v4.app.FragmentManagerImpl.executeOpsTogether(FragmentManager.java:2149)
+        at android.support.v4.app.FragmentManagerImpl.optimizeAndExecuteOps(FragmentManager.java:2103)
+        at android.support.v4.app.FragmentManagerImpl.execPendingActions(FragmentManager.java:2013)
+        at android.support.v4.app.FragmentManagerImpl$1.run(FragmentManager.java:710)
+        at android.os.Handler.handleCallback(Handler.java:873)
+        at android.os.Handler.dispatchMessage(Handler.java:99)
+        at android.os.Looper.loop(Looper.java:193)
+        at android.app.ActivityThread.main(ActivityThread.java:6669)
+        at java.lang.reflect.Method.invoke(Native Method)
+        at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:493)
+        at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:866)
+
+
+恢复
+        at com.cvte.tv.setting.view.CRecyclerView.onRestoreInstanceState(CRecyclerView.java:35)
+        at android.view.View.dispatchRestoreInstanceState(View.java:18608)
+        at android.view.ViewGroup.dispatchThawSelfOnly(ViewGroup.java:3841)
+        at android.support.v7.widget.RecyclerView.dispatchRestoreInstanceState(RecyclerView.java:1257)
+        at android.view.ViewGroup.dispatchRestoreInstanceState(ViewGroup.java:3827)
+        at android.view.View.restoreHierarchyState(View.java:18586)
+        at android.support.v4.app.Fragment.restoreViewState(Fragment.java:475)
+        at android.support.v4.app.FragmentManagerImpl.moveToState(FragmentManager.java:1329)
+        at android.support.v4.app.FragmentManagerImpl.moveFragmentToExpectedState(FragmentManager.java:1528)
+        at android.support.v4.app.FragmentManagerImpl.moveToState(FragmentManager.java:1595)
+        at android.support.v4.app.BackStackRecord.executePopOps(BackStackRecord.java:807)
+        at android.support.v4.app.FragmentManagerImpl.executeOps(FragmentManager.java:2360)
+        at android.support.v4.app.FragmentManagerImpl.executeOpsTogether(FragmentManager.java:2149)
+        at android.support.v4.app.FragmentManagerImpl.optimizeAndExecuteOps(FragmentManager.java:2103)
+        at android.support.v4.app.FragmentManagerImpl.popBackStackImmediate(FragmentManager.java:823)
+        at android.support.v4.app.FragmentManagerImpl.popBackStackImmediate(FragmentManager.java:776)
+        
 ## 与 Activity 生命周期协调
 ![Activity生命周期对Fragment生命周期的影响](https://developer.android.google.cn/images/activity_fragment_lifecycle.png)  
 Fragment所在的 Activity 的生命周期会直接影响Fragment的生命周期，其表现为，Activity 的每次生命周期回调都会引发每个Fragment的类似回调。 例如，当 Activity 收到 onPause() 时，Activity 中的每个Fragment也会收到 onPause()。  
