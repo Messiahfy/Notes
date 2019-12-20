@@ -95,24 +95,22 @@
 
 **IntentService** 这是 Service 的子类，它使用工作线程逐一处理所有启动请求。如果您不要求服务同时处理多个请求，这是最好的选择。 您只需实现 onHandleIntent() 方法即可，该方法会接收每个启动请求的 Intent，使您能够执行后台工作。   
 
-&emsp;&emsp;onStartCommand（Intent intent, int flags, int startId）的三个参数含义如下：  
+------------------------
+onStartCommand（Intent intent, int flags, int startId）的三个参数含义如下：  
 * intent：startService(Intent intent)中传递的intent。如果服务在其进程消失后重新启动，它可能为空
 * flags：表示启动请求的方式，可选值有 0，START_FLAG_REDELIVERY，START_FLAG_RETRY，0代表没有，它们具体含义如下：
   * START_FLAG_REDELIVERY 表明intent是先前传递的intent的重新传递，因为服务在先前已经返回了 START_REDELIVER_INTENT ，
   * START_FLAG_RETRY 该flag代表当onStartCommand调用后一直没有返回值时，会尝试重新去调用onStartCommand()。
-* startId：指明当前服务的唯一ID，与stopSelfResult (int startId)配合使用，stopSelfResult 可以更安全地根据ID停止服务。
+* startId：表示特定启动请求的唯一整数，与stopSelfResult(int startId)或 stopSelf(int startId) 配合使用，stopSelfResult 可以更安全地根据ID停止服务。`startId的用法具体可见【停止服务】`。Service存活期间（onDestroy之前），收到的每个启动请求都有一个不同的startId。
+
 &emsp;&emsp;请注意，onStartCommand() 方法必须返回整型数。整型数是一个值，用于描述系统应该如何在服务被系统杀死的情况下继续运行服务（如上所述，IntentService 的默
 认实现将为您处理这种情况，不过您可以对其进行修改）。从 onStartCommand() 返回的值必须是以下常量之一：  
 
-**START_NOT_STICKY**    如果因内存不足系统在 onStartCommand() 返回后杀死服务，则除非有挂起 Intent 要传递，否则即使内存空闲系统也不会重建服务。这是最安全的选项，可以避免在不
-必要时以及应用能够轻松重启所有未完成的作业时运行服务。  
+**START_NOT_STICKY**   如果服务的进程在 onStartCommand() 返回后（服务处于started状态）被杀死，且没有其他Intent来启动它，则该服务会退出started状态，并且只有明确调用startService才会重新创建它。该服务不会收到Intent为null的 onStartCommand() 调用，因为不会在没有Intent启动它时被重新创建。这是最安全的选项，可以避免在不必要时以及应用能够轻松重启所有未完成的作业时运行服务。  
 
-**START_STICKY**    如果因内存不足系统在 onStartCommand() 返回后杀死服务，则会在内存空闲时重建服务并调用 onStartCommand()，但不会重新传递最后一个 Intent。相反，除非有
-挂起 Intent 要启动服务（在这种情况下，将传递这些 Intent ），否则系统会通过空 Intent 调用 onStartCommand()。这适用于不执行命令、但无限期运行并等待作
-业的媒体播放器（或类似服务）。  
+**START_STICKY**    如果服务的进程在 onStartCommand() 返回后（服务处于started状态）被杀死，则会保留服务的started状态但不会保留已发送的Intent。之后，系统会尝试重新创建服务。因为服务处于started状态，所以会保证在创建新的服务后调用其 onStartCommand() 方法。如果这个服务没有收到其他让它启动的命令，那么这个方法被系统调用的时候，intent参数就是null。这适用于不执行命令、但无限期运行并等待作业的媒体播放器（或类似服务）。  
 
-**START_REDELIVER_INTENT**    如果因内存不足系统在 onStartCommand() 返回后杀死服务，则会重建服务，并通过传递给服务的最后一个 Intent 调用 onStartCommand()。
-任何挂起 Intent 均依次传递。这适用于主动执行应该立即恢复的作业（例如下载文件）的服务。
+**START_REDELIVER_INTENT**    如果服务的进程在 onStartCommand() 返回后（服务处于started状态）被杀死，则会计划重建服务，并将最后一个传递的 Intent （即最近一次启动Service的Intent）通过 onStartCommand()重新传递。在服务使用 onStartCommand() 传递的startId调用 stopSelf(int startId) 前（或者直接调用stopSelf()），此Intent将保持并用于可能的重新传递，即没有主动stop就被销毁则会重建并传递Intent。重建时 onStartCommand() 方法不会传递为null的Intent，因为只有在所有启动此服务的都执行完的情况下才不会重启，所以多个Intent可能会有多次 onStartCommand() 的回调。这适用于主动执行应该立即恢复的作业（例如下载文件）的服务。
 
 ## 启动服务
 您可以通过将 Intent（指定要启动的服务）传递给 startService()，从 Activity 或其他应用组件启动服务。Android 系统调用服务的 onStartCommand() 方法，并向其传递 Intent。（切勿直接调用 onStartCommand()。）  
@@ -134,6 +132,9 @@ startService() 方法将立即返回，且 Android 系统调用服务的 onStart
 一旦请求使用 stopSelf() 或 stopService() 停止服务，系统就会尽快销毁服务。  
 
 但是，如果服务同时处理多个 onStartCommand() 请求，则您不应在处理完一个启动请求之后停止服务，因为您可能已经收到了新的启动请求（在第一个请求结束时停止服务会终止第二个请求）。为了避免这一问题，您可以使用 stopSelf(int) 确保服务停止请求始终基于最近的启动请求。也就说，在调用 stopSelf(int) 时，传递与停止请求的 ID 对应的启动请求的 ID（传递给 onStartCommand() 的 startId）。然后，如果在您能够调用 stopSelf(int) 之前服务收到了新的启动请求，ID 就不匹配，服务也就不会停止。  
+
+Service存活期间（onDestory之前），每个启动请求， onStartCommand() 中的 startId 都是唯一的。比如有三个启动请求，分别的startId为1、2、3。那么如果调用stopSelf(1)或者stopSelf(2)，Service并不会销毁，而是在调用stopSelf(3)时，也就是传入最后启动的startId，才会销毁。而如果直接调用stopSelf()，则会直接销毁。
+
 > 注意：为了避免浪费系统资源和消耗电池电量，应用必须在工作完成之后停止其服务。 如有必要，其他组件可以通过调用 stopService() 来停止服务。即使为服务启用了绑定，一旦服务收到对 onStartCommand() 的调用，您始终仍须亲自停止服务。  
 
 ## 创建绑定服务
@@ -148,6 +149,26 @@ startService() 方法将立即返回，且 Android 系统调用服务的 onStart
 多个客户端可以同时绑定到服务。客户端完成与服务的交互后，会调用 unbindService() 取消绑定。一旦没有客户端绑定到该服务，系统就会销毁它。  
 
 绑定服务参考[官方绑定服务指南](https://developer.android.google.cn/guide/components/bound-services.html)
+
+bindService 方法
+
+第二个参数： ServiceConnection 接口有四个方法
+
+第三个参数：如下为bindService第三个参数的具体分析
+
+可以使用|位运算符设置多个flag
+* `BIND_ABOVE_CLIENT` 表示绑定到此服务的客户端应用程序认为该服务比应用程序本身更重要。设置后，当绑定服务期间遇到OOM需要杀死进程，客户进程会先于服务进程被杀死，尽管不能保证确实如此。
+* `BIND_ADJUST_WITH_ACTIVITY` 如果与Activity绑定，则基于Activity是否对用户可见，允许提高目标服务的过程重要性，使Service的重要性和Activity一致。
+* `BIND_ALLOW_OOM_MANAGEMENT` 允许承载绑定服务的进程进行正常的内存管理。允许系统在内存不足或其他情况下杀死它，并且在其长时间运行的情况下更可能使其成为被杀死（并重启）的候选进程。
+* `BIND_AUTO_CREATE` 只要绑定存在，就自动创建服务。注意，虽然这将创建服务，但它的service.onStartCommand（Intent，int，int）方法仍然只会由于对startService（Intent）的显式调用而被调用。但是，即使没有这个功能，在创建服务时，它仍然提供对服务对象的访问。设置后，只有绑定的Activity位于前台，此服务才会变得重要（影响低内存杀进程）。要影响系统对其重要性的判断，可以使用BIND_ADJUST_WITH_ACTIVITY。
+* `BIND_DEBUG_UNBIND` 包括对不匹配的解除绑定调用的调试帮助。设置此标志时，将保留以下unbindService（ServiceConnection）调用的调用堆栈，以便在以后进行不正确的unbind调用时打印。请注意，这样做需要保留在应用程序生命周期内生成的绑定的信息，从而导致泄漏——这只应用于调试。
+* `BIND_EXTERNAL_SERVICE` 让Service可以绑定并运行在调用方的App中，而不是在声明这个Service的App中，此Service还同时须要设置isolatedProcess为true。
+* `BIND_IMPORTANT` 此服务对客户端非常重要，因此在客户端处于前台进程级别时应将其带到前台进程级别。不使用此flag的话，进程只能由客户端提升到可见性级别，即使该客户端位于前台。
+* `BIND_INCLUDE_CAPABILITIES` 如果发起绑定的应用程序由于其前台状态（如活动或前台服务）而具有特定功能，则此标志将允许被绑定的应用程序获得相同的功能，只要它也具有所需的权限。
+*`BIND_NOT_FOREGROUND` 不允许此绑定将目标服务的进程提升到前台调度优先级。它仍将被提升到至少与客户端相同的内存优先级（这样在客户端不可杀死的任何情况下，其进程都不会被杀死），但出于CPU调度的目的，它可能会留在后台。这只会在绑定客户端是前台进程而目标服务是后台进程的情况下产生影响。
+* `BIND_NOT_PERCEPTIBLE` 如果绑定来自可见或用户可感知的应用程序，会将目标服务的重要性降低到可感知级别以下。这允许系统（临时）从内存中删除绑定进程，为更重要的用户可感知进程腾出空间。
+* `BIND_WAIVE_PRIORITY` 不要影响目标服务宿主进程的调度或内存管理优先级。允许在后台LRU列表上管理服务的进程，就像在后台管理常规应用程序进程一样。
+
 ## 向用户发送通知
 一旦运行起来，服务即可使用 Toast 通知或 状态栏通知 来通知用户所发生的事件。  
 
