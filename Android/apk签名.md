@@ -1,0 +1,6 @@
+[都知道v1和v2签名，v3你了解吗？](https://mp.weixin.qq.com/s/sqZ_5M-14w6lW9LHgdBRQw)
+[Android 签名机制 v1、v2、v3](https://mp.weixin.qq.com/s/5hGVk6IYVzkDRSb-DGMY-w)
+[Android P v3签名新特性](https://xuanxuanblingbling.github.io/ctf/android/2018/12/30/signature/)
+[应用签名](https://source.android.com/security/apksigning)
+[V2签名机制详解](https://www.jianshu.com/p/308515c94dc6)
+[Android 的打包](https://juejin.im/post/5d4fe922518825371070dce2#heading-23)
