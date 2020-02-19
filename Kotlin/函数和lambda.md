@@ -133,6 +133,17 @@ a { it.isNotEmpty() }
 map.forEach { _, value -> println("$value!") }
 ```
 
+注意：
+```
+fun add(f: (Int) -> Unit) {
+    f.invoke(1)
+}
+val li = { i: Int -> print(i) }
+add(li)     //正确
+add { li }  //错误，实际是在传给add的lambda中又写了一个为值lambda无用表达式
+
+```
+
 ## fun声明函数和lambda的混淆问题
 由于使用fun声明函数和lambda表达式都是使用花括号{}，容易产生混淆，总结区别如下：
 * fun在没有等号，只有花括号的情况下，是最常见的函数体，如果返回非Unit值，必须带return
