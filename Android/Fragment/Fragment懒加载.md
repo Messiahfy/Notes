@@ -69,6 +69,9 @@
 **************************************
 **注意：**以上生命周期测试使用的是`FragmentPagerAdapter`，还有一个`FragmentStatePagerAdapter`用于fragment较多的情况。区别在于如果某个fragment不在当前显示的fragment的**预加载相邻范围内**，`FragmentPagerAdapter`对该fragment调用**detach()**方法，虽然此函数名为detach，但只会使fragment的生命周期走到`onDestroyView()`，并不会调用`onDestroy()`和`onDetach()`，而`FragmentStatePagerAdapter`则会调用`remove()`，使fragment走到`onDetach()`。即`FragmentPagerAdapter`只会销毁视图结构，而`FragmentStatePagerAdapter`还会销毁fragment对象。
 **************************************
+
+> 新的FragmentTransaction中已经有了setMaxLifecycle方法，不再需要开发者进行以下复杂的控制。而ViewPager2中默认不预加载，所以也可以不需要以下的懒加载方式。
+
 ## 3.在ViewPager中懒加载
 > 因为`fragment`在`ViewPager`中使用时才会被预加载，所以我们说的`fragment`懒加载都是针对其在`ViewPager`使用的情况
 
