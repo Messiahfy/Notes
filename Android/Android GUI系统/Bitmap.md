@@ -1,3 +1,10 @@
+## 概述
+Android中用Bitmap表示一张加载到内存的图片，Bitmap的大小取决于分辨率和颜色模式，而这个分辨率不一定是原图的分辨率，例如可以根据加载到的View调整，从而节省内存。而图片文件的大小和加载到内存中的大小是不同的，图片文件的格式是图片的容器，例如jpg、png、webp等，它们把图片原本的像素信息通过特定的压缩算法转换为另一种数据格式，加载图片文件到内存，会解析图片格式，还原为位图，即Bitmap对象。
+
+Bitmap如果是从res中的drawable目录加载的，也就是通过decodeResource方法，那么此方法内会根据设备实际dpi和drawable目录的dpi的倍数关系来方法或缩小Bitmap的分辨率，而如果没有做修改，那么同一个原图文件加载的Bitmap大小是一样的。所以，实质上如果没有手动修改了Bitmap的分辨率和颜色模式，那么原图加载为Bitmap占用内存的大小，不会受View的宽高等因素影响。
+
+关于位图的内存管理，可参考官方文档 https://developer.android.google.cn/topic/performance/graphics
+
 canvas(bitmap)可以使用canvas在此bitmap上绘制，也就是绘制一个bitmap
 
 ## 一.Bitmap的大小
@@ -6,7 +13,7 @@ canvas(bitmap)可以使用canvas在此bitmap上绘制，也就是绘制一个bit
 &emsp;&emsp;&#160;Bitmap有两个内部枚举类，如下：
 1. `Config`：表示bitmap每个像素的颜色模式，分为`ALPHA_8`，`RGB_565`，`ARGB_8888`等
 2. `CompressFormat`：表示bitmap的压缩格式，分为`JPEG`,`PNG`,`WEBP`
-config相关方法有`getConfig` 和 `setConfig`（实际调用reconfigure），修改方法不应用于正在被视图系统、canvas或者AndroidBitmap NDK API使用的bitmap，参见官网。
+config相关方法有`getConfig` 和 `setConfig`（实际调用reconfigure），修改方法不应用于正在被视图系统、canvas或者Android Bitmap NDK API使用的bitmap，参见官网。
 
 CompressFormat用于调用bitmap的compress方法时传入，用于指定压缩格式。
 ***
