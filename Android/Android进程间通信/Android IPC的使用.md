@@ -1,4 +1,11 @@
-Android多进程比较繁杂，这里参考《Android开发艺术探索》，总结对自己来说其中关键的部分。
+Android常用跨进程通信的方式：
+1.intent/bundle 单向通信，无法同步调用
+2.文件
+3.messenger（基于AIDL，归根到底还是Binder）
+4.AIDL（基于Binder）
+5.ContentProvider（基于Binder）
+6.Socket
+
 # 1. 开启多进程
 &emsp;&emsp;给Android的四大组件在manifest文件中指定`android:process`属性，除此之外可以通过JNI在native层去fork一个进程，但这种方式不常用。
 &#160; &#160; &#160; &#160;例如为activity指定进程：
