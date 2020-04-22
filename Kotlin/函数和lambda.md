@@ -175,6 +175,31 @@ val sum = fun Int.(other: Int): Int = this + other
 2.sum(1)//结果为3
 ```
 
+还可以通过这样的方式，做成dsl语言的形式：
+```
+class HTML {
+    fun head() { …… }
+    fun body() { …… }
+}
+
+fun html(init: HTML.() -> Unit): HTML {
+    val html = HTML()  // 创建接收者对象
+    html.init()        // 将该接收者对象传给该 lambda
+    return html
+}
+
+html {
+    head()   
+    body()
+}
+
+//也可以这样使用，但一般使用lambda才更加灵活
+html(HTML::body)
+```
+html函数的参数类型，上下文为HTML类，所以此init函数将只能被HTML实例调用。调用html函数时，传入的 lambda 表达式就是init函数的字面量，这个lambda的上下文或者说this就是调用init函数的HTML实例。
+
+例如内置扩展函数 apply 等，则结合了扩展函数和这里的带接收者的函数字面值的写法。
+
 ## 内联函数
 在Kotlin中每声明一个Lambda表达式，就会在字节码中产生一个匿名类。该匿名类包含了一个invoke函数，作为Lambda的调用函数，每次调用时还会创建新对象。所以Lambda表达式存在额外的开销。
 
