@@ -1,24 +1,56 @@
-## 1. Lifecyles
-[Android-Lifecycle](https://www.jianshu.com/p/2c9bcbf092bc)
-[Jetpack 之 LifeCycle 使用篇](https://juejin.im/post/5df64c19518825121d6e2013)
+# Jetpack概述
+现有的 support library 和架构组件组合起来，现在统一放到androidX库中，也就是说把提高Android开发体验的一系列库做了统一。
 
-## 2. DataBinding
-[Android DataBinding](https://www.jianshu.com/p/2c4ac24761f5)
-[DataBinding](https://juejin.im/post/5d89d9f8f265da03f2340e2b)
+## Lifecyles
 
-## 3. Navigation
-[Android Navigation库使用详解](https://mp.weixin.qq.com/s?__biz=MzA5MzI3NjE2MA==&mid=2650243401&idx=1&sn=4a36c9904ae6dab73e5c3472b5ce4438&chksm=88637026bf14f930995d083df57c920eeda4fdd1a6ff63096b5338d4be23844a616d18f21e77&scene=38#wechat_redirect)
-[Android官方架构组件Navigation](https://mp.weixin.qq.com/s?__biz=MzIwMTAzMTMxMg==&mid=2649492677&idx=1&sn=4d04f1045a01131d8bef185f625e2745&chksm=8eec873ab99b0e2cf8835f2a5b43f0c8aee4c7debb277895d850e8d12a3168a1cf2413d87161&scene=38#wechat_redirect)
+提供了一套类和接口，可用于构建能感知生命周期的组件。
+好处就是可以将生命周期回调中的代码移到组件本身中。
 
-## 4. ViewModel
-[ViewModel由浅入深](https://www.jianshu.com/p/fdafc310fcdc)
-[ViewModel由浅入深](https://juejin.im/post/5d5a3cd9f265da03c23ed40a)
-[ViewModel的使用及原理解析](https://mp.weixin.qq.com/s/3Q3aJ0mYUWU5bo8rZOhDcA)
-[剖析 Android 架构组件之 ViewModel](https://mp.weixin.qq.com/s?__biz=MzIxNzU1Nzk3OQ==&mid=2247487227&idx=1&sn=b38805ef59f9ecfeb5b72cbae2ed3df8&chksm=97f6b04fa081395970a81c480cf7c5dde3a02cc5cecb01da287189d59bd82dccd8de13418ffa&scene=38#wechat_redirect)
+LifecycleOwner（Activity/Fragment等）提供一个 Lifecycle 对象
 
-## 5. LiveData
-LiveData 是一种可观察的数据存储器类。与常规的可观察类不同，LiveData 具有生命周期感知能力，意指它遵循其他应用组件（如 Activity、Fragment 或 Service）的生命周期。这种感知能力可确保 LiveData 仅更新处于活跃生命周期状态的应用组件观察者。通常在 ViewModel 内使用。
+LifecycleObserver 就对这个 Lifecycle（实现类为LifecycleRegistry） 对象进行观察
+
+Lifecycle 作为中转站来传递生命周期事件到LifecycleObserver
+
+LifecycleRegistry如何接收到LifecycleOwner的生命周期回调
+
+使用无界面Fragment
+Api 29以上，直接监听Activity回调Api 29以下，通过Fragment生命周期
+
+
+关键点2: 
+LifecycleRegistry如何分发生命周期事件给LifecycleObserver
+
+没有直接传递Lifecycle.Event，而是转为Lifecycle.State，跟原有State比较，再转为Event发给LifecycleObserver
+
+目的在于可以确保收到完整的生命周期事件流程，以及防止自定义的情况生命周期状态不规范。
+
+
+## ViewModel
+ViewModelProvider 获取ViewModel的壳子
+
+ViewModelStoreOwner（Activity等） 提供ViewModelStore 
+
+ViewModelStore 是实际存储ViewModel的地方
+
+
+ViewModel如何在配置变更重建情况保持？
+ 
+配置变更时，ActivityThread调用handleRelaunchActivity重建Activity，会先调用handleDestroyActivity，其中会执行Activity的retainNonConfigurationInstances()-->onRetainNonConfigurationInstance()，
+得到其中存储了ViewModelStore的NonConfigurationInstances对象。
+
+然后将此对象在执行handleLaunchActivity-->performLaunchActivity 时传给新创建的Activity
+
+## LiveData
+LiveData 是一种可观察的数据存储器类。与常规的可观察类不同，LiveData 具有生命周期感知能力，意指它遵循其他应用组件（如 Activity、Fragment 或 Service）的生命周期。这种感知能力可确保 LiveData 仅更新处于活跃生命周期状态的应用组件观察者。组件销毁时自动取消观察。通常在 ViewModel 内使用。
 
 [深入理解架构组件：LiveData](https://github.com/googlesamples/android-sunflower)
 
-可以重写 onActive 和 onInactive()，对应变为活跃和变为非活跃的时机，可执行一些资源、连接相关操作
+如何做到仅在组件处于活跃生命周期时才更新数据？
+
+观察LiveData时，会传入LifecycleOwner，只有其lifecycle状态为STARTED以上时，才会实际通知观察者。
+
+
+如何做到组件回到活跃生命周期时立即更新数据？
+
+观察LiveData传入的LifecycleOwner，一旦其生命周期状态变化到STARTED以上就会立即通知Observer
