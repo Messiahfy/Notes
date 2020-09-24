@@ -37,4 +37,4 @@ System.out.println(source.readByteString().string(Charset.forName("utf-8")));
 ![Okio缓存模块](https://upload-images.jianshu.io/upload_images/3468445-83f3c8e553c06261.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
 
-和NIO类似，Okio内部的读写也是先写读到Buffer缓存区，再从缓存区读写。有缓存可以防止频繁GC
+和NIO类似，Okio内部的读写也是**先写读到Buffer缓存区，再从缓存区读写**，Buffer既是Source也是Sink，所以读写都可以用这个Buffer作为中转。有缓存可以防止频繁GC
