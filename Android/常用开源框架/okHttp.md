@@ -432,6 +432,28 @@ https://www.cnblogs.com/webor2006/p/10362197.html
 https://juejin.im/post/6844904102669844493#heading-6
 
 
-建立连接 具体
-Http 2.0
-Https
+## 建立连接的具体分析
+https://blog.csdn.net/chunqiuwei/article/details/73350657
+https://blog.csdn.net/chunqiuwei/article/details/74936885
+https://blog.csdn.net/chunqiuwei/article/details/76098827
+
+### Http 2.0 简要说明
+https://juejin.im/post/6844903667569541133#heading-6
+https://halfrost.com/http2-http-frames-definitions/
+
+* 使用数据帧的形式，帧有不同的类型，起始行和头部为HEADER类型的帧，Body为DATA类型的帧，还有其他多种类型的帧。Frame Payload部分的格式由具体帧的类型决定。
++-----------------------------------------------+
+|                 Length (24)                   |
++---------------+---------------+---------------+
+|   Type (8)    |   Flags (8)   |
++-+-------------+---------------+-------------------------------+
+|R|                 Stream Identifier (31)                      |
++=+=============================================================+
+|                   Frame Payload (0...)                      ...
++---------------------------------------------------------------+
+* 多路复用
+* header压缩
+* 其他特点
+
+### HTTPS
+OkHttp中也是使用Java的SSLSocket来完成HTTPS通信。
