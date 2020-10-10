@@ -347,7 +347,7 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
     }
 ```
 最终返回给Activity的保存信息结构如图：
-![保存的Fragments数据图](https://github.com/Messiahfy/Notes/blob/master/Android/图片/Fragment状态保存信息.png?raw=true)
+![保存的Fragments数据图](../../引用图片/Fragment状态保存信息.png)
 
 **恢复**源码分析：在Activity的onCreate(Bundle savedInstanceState)中调用了mFragments.restoreAllState方法（onCreate最后会调用mFragments.dispatchCreate()方法，重走Fragment生命周期），最终调用到FragmentManagerImpl的restoreAllState方法。FragmentManagerImpl的restoreAllState()方法恢复数据后，Activity会调用FragmentController的dispatchCreate()方法使Fragment进入生命周期。
 ```
@@ -445,6 +445,12 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
 ```
 **Fragment重建的重点** Activity会自动重建Fragment，Fragment会重走完整生命周期。但如果Fragment调用了setRetainInstance（配置变更有效，但若activity被kill，则无效），则只会onDestroyView()和onDetach()，不会onDestroy()，重建时调用onAttach()和onActivityCreated()，不会调用onCreate()。    
 因为自动重建后的Fragment是一个新的对象，重建时应该让对象变量引用这个重建的Fragment，而不是再去创建一个新的（会造成存在两个Fragment），如果Fragment有用id或者tag标记，那么可以在Activity的onCreat()或者onRestoreInstanceState()使用id或者tag获取到重建的Fragment对象，但如果既没有id又没有tag，比如在ViewPager中使用的情况，那么可以通过FragmentManager的putFragment()和getFragment()方法配合使用，用于获取重建的那个Fragment对象。
+
+
+内存回收，杀死进程，fragment是新的对象；配置变更，进程还在，重建activity，这时保存的fragment是否还是原对象??
+
+Activity A 启动Activity B，然后挂后台 ，内存回收杀死进程后，再回到应用，恢复栈，此时恢复 Activity B，如果按返回键，则恢复Activity A。也就是说，重启应用，只恢复栈顶Activity，栈内其他Activity在需要时才恢复（栈顶Activity B透明的情况下，则栈顶之下的Activity A也会立即恢复）。所以把Activity作为初始化数据的载体并不适合，只有Application是保证先启动。
+
 
 ## FragmentManager也会保存和恢复Fragment内View的状态
 Fragment回退栈离开和返回上一Fragment时
