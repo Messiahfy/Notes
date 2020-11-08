@@ -117,3 +117,16 @@ sqlSession.close();
 
 ## 结果映射、动态sql、缓存等功能
 复杂查询时需要用到ResultMap，拼接sql时需要用到动态sql，这些部分内容可以查看官方文档即可。
+
+## mybatis-spring
+[官方文档](https://mybatis.org/spring/zh/index.html)，这个官方文档的入门部分不太好，比如一般datasource使用的是如下类型，但文档中没有体现配置datasource，还有其他步骤也不明确。使用时，还是结合看https://www.bilibili.com/video/BV1WE411d7Dv?p=24这个视频教程
+```
+<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+    <property name="driverClassName" value="${jdbc.driver}"/>
+    <property name="url" value="${jdbc.url}"/>
+    <property name="username" value="${jdbc.username}"/>
+    <property name="password" value="${jdbc.password}"/>
+</bean>
+```
+
+可以结合spring的DataSourceTransactionManager完成事务管理
