@@ -506,6 +506,7 @@ export default {
 ```
 
 ### 嵌套路由
+```
 {
     path: '/home',
     component: ()=>import('../components/Home')
@@ -520,6 +521,7 @@ export default {
         }
     ]
 }
+```
 然后在Home组件中使用 router-link（这里要写全路径） 和router-view
 
 ### 传递参数
