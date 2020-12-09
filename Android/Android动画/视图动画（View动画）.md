@@ -133,6 +133,7 @@ if (a != null) {
     transformToApply = parent.getChildTransformation();
 } 
 ......
+```
 可见，在绘制的时候会判断动画不会空，调用`applyLegacyAnimation(...)`方法，其中会调用如下：
 ```
 ...
