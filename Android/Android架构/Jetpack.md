@@ -1,6 +1,8 @@
 # Jetpack概述
 现有的 support library 和架构组件组合起来，现在统一放到androidX库中，也就是说把提高Android开发体验的一系列库做了统一。
 
+https://developer.android.google.cn/jetpack/androidx/releases/lifecycle
+
 ## Lifecyles
 
 提供了一套类和接口，可用于构建能感知生命周期的组件。

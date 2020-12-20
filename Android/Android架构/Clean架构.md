@@ -12,6 +12,8 @@ Clean架构对应到Android应用软件，可以分为3层：
 
 [可参考](https://www.jianshu.com/p/66e749e19f0d)
 
+https://juejin.cn/post/6844904176296673287
+
 ## 测试方式
 1. Data层：
 2. Domain层

@@ -366,7 +366,7 @@ class kotlin.Int
 在Android开发中，就可以实现如下效果：
 ```
 inline fun <reified T : Activity> Activity.startActivity() {
-    startActivity(Intent(this, T::class))
+    startActivity(Intent(this, T::class.java))
 }
 //使用
 startActivity<DetailActivity>()
