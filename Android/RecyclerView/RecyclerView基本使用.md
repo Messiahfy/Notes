@@ -72,6 +72,9 @@ public class HfyViewHolder extends RecyclerView.ViewHolder {
 getAdapterPosition ()和getLayoutPosition ()的差别在于getAdapterPosition ()是数据源中的实时位置，getLayoutPosition ()是显示在界面的位置，一般情况是相同的，只有在更新数据源但还没有刷新界面的短暂时间内是不相等的。
 
 getItemViewType()用于获得设置的viewType
+
+> 1.2.0版本中，增加`MergeAdapter`实现多类型布局，但动态化程度并不是很强，只能按组合adapter的顺序来显示不同的布局。比如按顺序添加header、content、footer对应的adapter；更动态化的布局，还是要使用`getItemViewType`
+
 ## 2. ItemDecoration
 &emsp;&emsp;可以自定义`ItemDecoration`来添加分割线或其他对列表中的项目修饰。通过recyclerView.addItemDecoration (RecyclerView.ItemDecoration decor)方法。
 &emsp;&emsp;ItemDecoration是一个抽象类，需要我们自己实现。去除掉onDraw和onDrawOver的`@Deprecated`的方法，代码如下：
