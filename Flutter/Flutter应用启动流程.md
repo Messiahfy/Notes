@@ -146,7 +146,7 @@ void initInstances() {
 ```
 1. 创建`PipelineOwner`，管理渲染流水线
 2. 给`window`设置各种回调，比如屏幕尺寸、密度等变化
-3. 创建并初始化`RenderView`，下一帧将被绘制。`RenderView`就是`RenderObject`绘制树的根
+3. 创建并初始化`RenderView`，下一帧将被绘制。`RenderView`就是`RenderObject`绘制树的根。initRenderView函数内部赋值renderView，而renderView重写了setter，会引发全部`RenderObject`调用`attach`
 4. 向添加`SchedulerBinding`的`_persistentCallbacks`中添加回调，回调内容为执行渲染流水线
 
 第七个是`WidgetsBinding`
