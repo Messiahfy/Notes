@@ -84,7 +84,11 @@ void doTraversal() {
 
 * **draw**：`performDraw` --> `draw`  --> 选择硬件绘制或软件绘制 --> `view.draw `（从`DecorView开始`）-->`view.onDraw`
 
-&emsp;&emsp;`view`的`draw`先绘制`background`，再调用`onDraw`后，还会调用`dispatchDraw`，`dispatchDraw`方法在`view`中为空方法，其在`viewGroup`中实现，调用`drawChild`方法，`drawChild`会调用了每个子`view`的`draw(Canvas canvas, ViewGroup parent, long drawingTime)`继而调用`draw(Canvas canvas)`-->`onDraw`，从而绘制每个子`view `。注意视图树的绘制使用的是一个Canvas，ViewGroup调用child的`draw(Canvas canvas, ViewGroup parent, long drawingTime)`方法会修改Canvas的translate等，使之对应child的坐标。
+&emsp;&emsp;`view`的`draw`先绘制`background`，再调用`onDraw`后，还会调用`dispatchDraw`，`dispatchDraw`方法在`view`中为空方法，其在`viewGroup`中实现，调用`drawChild`方法，`drawChild`会调用了每个子`view`的`draw(Canvas canvas, ViewGroup parent, long drawingTime)`继而调用`draw(Canvas canvas)`-->`onDraw`，从而绘制每个子`view `。注意视图树的绘制使用的是一个Canvas，ViewGroup调用child的`draw(Canvas canvas, ViewGroup parent, long drawingTime)`方法会修改Canvas的translate等，使之对应child的坐标，canvas原点调整为child的左上角，以及使用clipRect使child只能在自己的范围内绘制（因为默认clipChildren为true）。除非设置了clipChildren、clipPadding为false。
+
+draw(Canvas canvas, ViewGroup parent, long drawingTime)中，分为软件和硬件绘制：
+1. 软件绘制：会执行 canvas.clipRect(sx, sy, sx + getWidth(), sy + getHeight())来剪切，使child只绘制在自己范围内，除非设置clipChildren为false
+2.硬件绘制：updateDisplayListIfDirty --> setDisplayListProperties内有判断getClipChildren来决定是否执行setClipToBounds
 
 
 **绘制流程中注意的是**，`view`的`onMeasure`只管自己，`ViewGroup`还要管子`view`。`view`一般不用重写`onLayout`，`ViewGroup`需要在`onLayout`中调用子`View`的`layout`为其设置布局位置。`view`重写`onDraw`绘制，`ViewGroup`一般不用重写`onDraw`。

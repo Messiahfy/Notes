@@ -7,3 +7,7 @@ https://mp.weixin.qq.com/s/6StwSzTTPJoz1w3bFGitzg
 https://wanandroid.com/wenda/show/9974
 
 https://www.wanandroid.com/wenda/show/9088
+
+混淆规则
+
+-keep 可以避免类和成员都不被混淆，但是后面如果只指定了类，也只会使类不被混淆，要避免成员不被混淆，则还需要指明成员

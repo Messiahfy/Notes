@@ -43,7 +43,12 @@ ViewModel如何在配置变更重建情况保持？
 
 然后将此对象在执行handleLaunchActivity-->performLaunchActivity 时传给新创建的Activity
 
+
+如果要使用构造函数有参数的ViewModel，可以继承AbstractSavedStateViewModelFactory，子类增加一个参数；如果还要保存状态到bundle中，则需要使用AbstractSavedStateViewModelFactory或者SavedStateViewModelFactory
+
 ## LiveData
+主动和被动使用数据 最佳用法？？？  是否最好应结合databinding？？？
+
 LiveData 是一种可观察的数据存储器类。与常规的可观察类不同，LiveData 具有生命周期感知能力，意指它遵循其他应用组件（如 Activity、Fragment 或 Service）的生命周期。这种感知能力可确保 LiveData 仅更新处于活跃生命周期状态的应用组件观察者。组件销毁时自动取消观察。通常在 ViewModel 内使用。
 
 [深入理解架构组件：LiveData](https://github.com/googlesamples/android-sunflower)
@@ -56,3 +61,8 @@ LiveData 是一种可观察的数据存储器类。与常规的可观察类不�
 如何做到组件回到活跃生命周期时立即更新数据？
 
 观察LiveData传入的LifecycleOwner，一旦其生命周期状态变化到STARTED以上就会立即通知Observer
+
+## DataBinding
+数据绑定如果在xml中使用`ViewModel中的LiveData`或者是`androidx.databinding.Observable的子类`，编译时注解会生成对应的响应式监听更新代码
+
+生成的binding类，设置数据，默认都会到下一帧才会实际刷新生效，如果要立即刷新生效，那么可以调用executePendingBindings()。如果设置LifecycleOwner，那么到生命周期STARTED的时候才生效
