@@ -12,9 +12,13 @@ class GridItemDecoration(private val margin: Int) : RecyclerView.ItemDecoration(
         val childCount = gridLayoutManager.itemCount
         val spanSizeLookup = gridLayoutManager.spanSizeLookup
         val spanCount = gridLayoutManager.spanCount
-        val spanIndex = (view.layoutParams as GridLayoutManager.LayoutParams).spanIndex
-        val spanSize = (view.layoutParams as GridLayoutManager.LayoutParams).spanSize
-        val position = gridLayoutManager.getPosition(view)
+        //注释掉的方式是用的viewPosition，改为下面的adapterPosition，避免动画时计算使用的还是旧位置
+//        val spanIndex = (view.layoutParams as GridLayoutManager.LayoutParams).spanIndex
+//        val spanSize = (view.layoutParams as GridLayoutManager.LayoutParams).spanSize
+//        val position = gridLayoutManager.getPosition(view)
+        val position = parent.getChildAdapterPosition(view)
+        val spanIndex = gridLayoutManager.spanSizeLookup.getSpanIndex(position, spanCount)
+        val spanSize = gridLayoutManager.spanSizeLookup.getSpanSize(position)
 
         var left = 0
         var top = 0
@@ -50,7 +54,7 @@ class GridItemDecoration(private val margin: Int) : RecyclerView.ItemDecoration(
                 // 第一行
                 bottom = margin / 2
             }
-            totalRowCount - 1 -> {
+            totalRowCount -> {
                 // 最后一行
                 top = margin / 2
             }

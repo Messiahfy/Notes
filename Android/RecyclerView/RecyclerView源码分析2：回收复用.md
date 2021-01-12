@@ -425,3 +425,4 @@ if (holder == null && mViewCacheExtension != null) {
 &#160; &#160; &#160; &#160;`recyclerView()`之前还会调用`LayoutManager#removeViewAt`方法，-->ChildHelper#removeViewAt-->callback#removeViewAt（在RecyclerView中传入了callback实现类）-->RecyclerView.this.removeViewAt(index)-->ViewGroup#removeViewAt-->ViewGroup#removeViewInternal-->view.dispatchDetachedFromWindow()-->onDetachedFromWindow()
 &#160; &#160; &#160; &#160;所以回收ViewHolder，也是会将View从RecyclerView这个ViewGroup中remove掉，跟平常的ViewGroup一样，同时也会是View调用`onDetachedFromWindow()`方法。**所以视图对象虽然会被回收复用，但它还是会先从容器中remove，也会调用onDetachedFromWindow方法。**
 
+回收对焦点的影响问题？？？

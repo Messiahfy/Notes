@@ -21,6 +21,8 @@ https://juejin.cn/post/6844904176296673287
 
 View  --  Presenter或ViewModel --  UserCase(包含线程调度，回调等)  --  Model(Repository实现接口DataSource，内部操作local和remote，local和remote也实现DataSource接口，DataSource接口包含读写数据的基本方法)
 
+domain都是userCase
+
 View向UserCase中注入Repository，依赖倒置
 
 数据库表，是业务相关，应该属于domain的model，而data层只是数据库实现和dao

@@ -66,3 +66,5 @@ LiveData 是一种可观察的数据存储器类。与常规的可观察类不�
 数据绑定如果在xml中使用`ViewModel中的LiveData`或者是`androidx.databinding.Observable的子类`，编译时注解会生成对应的响应式监听更新代码
 
 生成的binding类，设置数据，默认都会到下一帧才会实际刷新生效，如果要立即刷新生效，那么可以调用executePendingBindings()。如果设置LifecycleOwner，那么到生命周期STARTED的时候才生效
+
+在databinding的xml文件中使用liveData或者BaseObservableField的子类型，在xml中会直接当成他们包装的原始类型使用，比如`LiveData<String>`会被当成String类型，当然，这只是在xml中使用的时候。
