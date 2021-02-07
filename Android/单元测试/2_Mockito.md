@@ -1,4 +1,5 @@
 [Mockito框架的使用](https://blog.csdn.net/qq_17766199/article/details/78450007)
+[参考 了解Android单元测试](https://juejin.im/post/5e153164f265da5d701ee34e#heading-15)
 
 ## 1. Mockito概述
 &emsp;&emsp;Mockito是Java中的一个Mock框架。mock对象就是在调试期间用来作为真实对象的替代品。mock测试就是在测试过程中，对那些不容易构建的对象用一个虚拟对象来代替测试的方法就叫mock测试。什么要使用mock呢？关键就在于专注于测试本类，可以对于依赖的对象可以使用mock来得到，做到依赖隔离。
