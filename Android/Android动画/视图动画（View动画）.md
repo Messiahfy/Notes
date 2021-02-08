@@ -146,6 +146,9 @@ animation的getTransformation方法则会调用到`Animation`类的`applyTransfo
 
 最终得到的`transformToApply`，其中包含矩阵变换和alpha值的信息，后续代码会使用`transformToApply`用于  
 `canvas`的矩阵变换和透明度变化。补间动画其实只是调整了子view画布canvas的坐标系，其实并没有修改任何属性，所以只能在原位置才能处理触摸事件
+
+> 设置了视图动画后，就会引发view重绘，绘制时执行矩阵变化。如果动画没有结束，即在View的applyLegacyAnimation方法中判断动画的getTransformation返回为true，就还会调用parent的invalidate，继续下一帧绘制。
+
 ```
 ## 7.视图动画的其他应用
 ----------------------------------------------
