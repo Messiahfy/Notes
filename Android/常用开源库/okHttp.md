@@ -457,3 +457,6 @@ https://halfrost.com/http2-http-frames-definitions/
 
 ### HTTPS
 OkHttp中也是使用Java的SSLSocket来完成HTTPS通信。
+
+### 番外
+HTTP是基于Socket的协议，所以通信的方式就是客户端和服务器建立通道来通信，也就是流的方式，客户端一边写入，服务端一边读取。所以okhttp返回response中，其中的header是已经通过socket的流读取了header部分的内容，但拿到的responseBody是需要我们通过流的方式来读取的。因为这个流已经读取了起始行和头部数据，当前读取位置已经是body部分，所以通过responseBody开始读取就是header之后的body数据。

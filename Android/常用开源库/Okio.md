@@ -36,5 +36,6 @@ System.out.println(source.readByteString().string(Charset.forName("utf-8")));
 `Buffer`实现了输入输出的核心工作，数据存储使用了`Segment`链表，`Segment`内部是一个字节数组，与`SegmentPool`共同实现缓存机制。
 ![Okio缓存模块](https://upload-images.jianshu.io/upload_images/3468445-83f3c8e553c06261.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
+Segment的0到pos为已读区域，pos到limit为未读区域，后面为空闲区域。使用Okio，和使用InputStream等类似，会记录当前读写的位置，后续操作只能继续往后读写；如果要从头再读写，就要再创建一个新的Source或者Sink。
 
-和NIO类似，Okio内部的读写也是**先写读到Buffer缓存区，再从缓存区读写**，Buffer既是Source也是Sink，所以读写都可以用这个Buffer作为中转。有缓存可以防止频繁GC
+和NIO类似，Okio内部的读写也是**先写读到Buffer缓存区，再从缓存区读写**，Buffer既是Source也是Sink，所以读写都可以用这个Buffer作为中转。有缓存可以利于内存共享和复用，防止频繁申请内存，降低GC频率。

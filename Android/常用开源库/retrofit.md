@@ -335,3 +335,7 @@ protected ReturnT adapt(Call<ResponseT> call, Object[] args) {
 ```
 
 **流程总结**：通过动态代理，调用接口的方法，通过ServiceMethod的子类来代理。根据注解等信息得到requestFactory，根据相关类型查找callAdapter和converter。将requestFactory、responseConverter等对象传递给OkHttpCall，OkHttpCall（retrofit2.Call的子类）就是实际的OkHttp.Call的包装。得到retrofit2.Call后，交给callAdpater转换类型，最终由开发者触发请求。实际请求结果ResponseBody会被Converter转换为需要的类型。
+
+
+## 番外
+通过retrofit可以直接得到http响应报文中的结果，也就是说，http本身是像流的方式读取的，但是retrofit已经直接帮我们读取数据到内存中了。如果想避免数据大的情况占用太大的内存，可以使用`@Streaming`。
