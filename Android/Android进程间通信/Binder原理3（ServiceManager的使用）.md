@@ -39,34 +39,51 @@ private static IServiceManager getIServiceManager() {
 ```
 `IServiceManager`是从`ServiceManagerNative.asInterface(IBinder obj)`而来，继续追踪：
 ```
-static public IServiceManager asInterface(IBinder obj)
+public abstract class ServiceManagerNative extends Binder implements IServiceManager
 {
-    if (obj == null) {
-        return null;
+    static public IServiceManager asInterface(IBinder obj)
+    {
+        if (obj == null) {
+            return null;
+        }
+        IServiceManager in =
+            (IServiceManager)obj.queryLocalInterface(descriptor);
+        if (in != null) {
+            return in;
+        }
+        return new ServiceManagerProxy(obj);
     }
-    IServiceManager in =
-        (IServiceManager)obj.queryLocalInterface(descriptor);
-    if (in != null) {
-        return in;
-    }
-    return new ServiceManagerProxy(obj);
+
+    ...
 }
 ```
 查询本地是否有IServiceManager，没有的话就创建`ServiceManagerProxy`。这里回看到上面说会调用`getIServiceManager().getService(name)`，看到这里我们知道就是调用了`ServiceManagerProxy.getService(name)`
 ```
-public IBinder getService(String name) throws RemoteException {
-    Parcel data = Parcel.obtain();
-    Parcel reply = Parcel.obtain();
-    data.writeInterfaceToken(IServiceManager.descriptor);
-    data.writeString(name);
-    mRemote.transact(GET_SERVICE_TRANSACTION, data, reply, 0);
-    IBinder binder = reply.readStrongBinder();
-    reply.recycle();
-    data.recycle();
-    return binder;
+class ServiceManagerProxy implements IServiceManager {
+    public ServiceManagerProxy(IBinder remote) {
+        mRemote = remote;
+    }
+
+    public IBinder asBinder() {
+        return mRemote;
+    }
+
+    public IBinder getService(String name) throws RemoteException {
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        data.writeInterfaceToken(IServiceManager.descriptor);
+        data.writeString(name);
+        mRemote.transact(GET_SERVICE_TRANSACTION, data, reply, 0);
+        IBinder binder = reply.readStrongBinder();
+        reply.recycle();
+        data.recycle();
+        return binder;
+    }
+
+    ...
 }
 ```
-这里的`mRemote`（IBinder类型）也就是传入的`BinderInternal.getContextObject()`。利用IBinder对象执行命令，GET_SERVICE_TRANSACTION表示获取ServiceManager的Binder句柄。`transact`方法内部会使用ProcessState和IPCThreadState来与Binder驱动通信。
+这里的`mRemote`（IBinder类型）也就是传入的`BinderInternal.getContextObject()`，ServiceManagerProxy就是代理的它。利用IBinder对象执行命令，GET_SERVICE_TRANSACTION表示获取ServiceManager的Binder句柄。`transact`方法内部会使用ProcessState和IPCThreadState来与Binder驱动通信。
 
 ## IBinder和BpBinder
 前面获取ServiceManager的代理，是通过一个`IBinder`对象的`transact`方法来执行与Binder驱动通信。现在来看IBinder内部如何完成与Binder驱动通信的任务。

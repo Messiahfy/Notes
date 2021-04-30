@@ -14,15 +14,12 @@ Linux内核中设备分为字符设备、块设备、网络接口。字符设备
 
 Binder架构采用分层架构设计，每一层都有其不同的功能：
 
-Java应用层：对于上层应用通过调用AMP.startService，完全可以不用关心底层,经过层层调用，最终必然会调用到AMS.startService；
-Java Binder层：Binder通信是采用C/S架构，Android系统的基础架构便已设计好Binder在Java framework层的Binder客户类BinderProxy和服务类Binder；
-Native Binder层：对于Native层,如果需要直接使用Binder(比如media相关)，则可以直接使用BpBinder和BBinder(当然这里还有JavaBBinder)即可，对于上一层Java IPC的通信也是基于这个层面；
-Kernel Binder层：这里是Binder Driver, 前面3层都跑在用户空间,对于用户空间的内存资源是不共享的，每个Android的进程只能运行在自己进程所拥有的虚拟地址空间，而内核空间却是可共享的。真正通信的核心环节还是在Binder Driver。
-
-
+* Java应用层：对于上层应用通过调用AMP.startService，完全可以不用关心底层,经过层层调用，最终必然会调用到AMS.startService；
+* Java Binder层：Binder通信是采用C/S架构，Android系统的基础架构便已设计好Binder在Java framework层的Binder客户类BinderProxy和服务类Binder；
+* Native Binder层：对于Native层,如果需要直接使用Binder(比如media相关)，则可以直接使用BpBinder和BBinder(当然这里还有JavaBBinder)即可，对于上一层Java IPC的通信也是基于这个层面；
+* Kernel Binder层：这里是Binder Driver, 前面3层都跑在用户空间,对于用户空间的内存资源是不共享的，每个Android的进程只能运行在自己进程所拥有的虚拟地址空间，而内核空间却是可共享的。真正通信的核心环节还是在Binder Driver。
 
 Binder通信采用C/S架构，从组件视角来说，包含Client、Server、ServiceManager以及binder驱动，其中ServiceManager用于管理系统中的各种服务。Binder 在 framework 层进行了封装，通过 JNI 技术调用 Native（C/C++）层的 Binder 架构，Binder 在 Native 层以 ioctl 的方式与 Binder 驱动通讯。
-
 
 # 2. Binder驱动
 Linux内核初始化时会调用驱动的初始化程序，从module_init开始，最终调用到各个驱动程序的初始化函数。Binder的设备驱动入口函数不是module_init，而是device_initcall(binder_init)，Binder的初始化函数为 `binder_init`，代码位于/kernel/drivers/staging/android/binder.c。
@@ -243,7 +240,7 @@ proc：申请内存的进程所对应的binder_proc
 allocate：1表示申请，2表示释放
 start：Binder中虚拟内存起点
 end：Binder中虚拟内存终点
-vma：应用程序中虚拟内存的描述
+vma：应用程序中虚拟内存的描述（函数内将完成内核内存空间和应用内存空间的映射）
 ```
 上面传入的start和end相差一个PAGE_SIZE，因为开始不需要分配很多，后面有需要再增加即可。
 
@@ -419,7 +416,7 @@ static int binder_ioctl_write_read(struct file *filp,
 		goto out;
 	}
 ```
-将用户空间数据通过`copy_from_user`复制到bwr中，然后处理bwr中的数据
+将用户空间数据通过`copy_from_user`复制地址到bwr中，然后处理bwr中的数据
 
 ```
 	...
@@ -523,7 +520,7 @@ static int binder_thread_write(struct binder_proc *proc,
 }
 ```
 `binder_transaction_data`数据结构是`IPCThreadState.writeTransactionData`中将Parcel包装后的数据，会被放到mOut中，然后放到binder_write_read bwr。这里的ptr就是读的bwr.write_buffer，也就是放到mOut中的位置。<br/>
-然后`copy_from_user(&tr, ptr, sizeof(tr))`就会将数据从用户空间复制到Binder内核空间。然后将数据交给`binder_transaction`处理：
+然后`copy_from_user(&tr, ptr, sizeof(tr))`就会将数据地址从用户空间复制到Binder内核空间。然后将数据交给`binder_transaction`处理：
 
 
 ##### binder_transaction
@@ -579,7 +576,7 @@ static void binder_transaction(struct binder_proc *proc,
 			...//异常处理
 		}
 ```
-`BC_TRANSACTION`处理的第一步：获取`target_node`。如果不是Service Mangager，则需要调用binder_get_ref来查找node，如果是Service Mangager，就直接使用全局变量`binder_context_mgr_node`
+`BC_TRANSACTION`处理的第一步：获取`target_node`。如果不是Service Mangager，则需要调用binder_get_ref来查找node，如果是Service Mangager，就直接使用全局变量`binder_context_mgr_node`（这个变量在SM启动的时候调用`binder_become_context_manager`时就创建了）
 
 ```
 		e->to_node = target_node->debug_id;
@@ -859,12 +856,12 @@ static void binder_transaction(struct binder_proc *proc,
 	}
 
 ```
-if 分支：事务出栈
+1. if 分支：事务出栈
+2. else if ：对于getService的情况，执行第二个分支。没有指定TF_ONE_WAY，就将`need_reply`设为1，并记录本次`binder_transaction`变量t，用于后期查询。
+3. else 分支：异步
 
-else if ：对于getService的情况，执行第二个分支。没有指定TF_ONE_WAY，就将`need_reply`设为1，并记录本次`binder_transaction`变量t，用于后期查询。
 
-else 分支： 
-
+继续执行后续代码：
 ```
 	t->work.type = BINDER_WORK_TRANSACTION;
 	list_add_tail(&t->work.entry, target_list);//加入对方的处理队列中
@@ -979,7 +976,7 @@ retry:
 			t = container_of(w, struct binder_transaction, work);
 		} break;
 		case BINDER_WORK_TRANSACTION_COMPLETE: {
-			cmd = BR_TRANSACTION_COMPLETE;
+			cmd = BR_TRANSACTION_COMPLETE; //
 			if (put_user(cmd, (uint32_t __user *)ptr)) //写入cmd到用户空间的mIn
 				return -EFAULT;
 			ptr += sizeof(uint32_t);
@@ -1035,7 +1032,7 @@ retry:
 		tr.offsets_size = t->buffer->offsets_size;
 		tr.data.ptr.buffer = (binder_uintptr_t)(
 					(uintptr_t)t->buffer->data +
-					proc->user_buffer_offset);
+					proc->user_buffer_offset);//得到数据的用户空间地址
 		tr.data.ptr.offsets = tr.data.ptr.buffer +
 					ALIGN(t->buffer->data_size,
 					    sizeof(void *));

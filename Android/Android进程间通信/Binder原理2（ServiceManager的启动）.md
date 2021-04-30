@@ -65,7 +65,7 @@ int main(int argc, char** argv)
         abort();//无法获取service_manager上下文
     }
 
-    /进入循环，处理client端发来的请求
+    // 进入循环，处理client端发来的请求
     binder_loop(bs, svcmgr_handler);
 
     return 0;
@@ -300,7 +300,7 @@ int svcmgr_handler(struct binder_state *bs,
         handle = do_find_service(s, len, txn->sender_euid, txn->sender_pid);
         if (!handle)
             break;
-        //将查到的server句柄存入参数reply中，reply.type为BINDER_TYPE_HANDLE
+        //将查到的server句柄handle存入参数reply中，reply.type为BINDER_TYPE_HANDLE
         bio_put_ref(reply, handle);
         return 0;
 

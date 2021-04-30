@@ -113,6 +113,8 @@ protected:
 PoolThread是一个线程，spawnPooledThread中的t->run则会执行它的`threadLoop`方法，返回false就只会执行一次。创建IPCThreadState并执行joinThreadPool方法
 
 ```
+// frameworks/native/libs/binder/IPCThreadState.cpp
+
 void IPCThreadState::joinThreadPool(bool isMain)
 {
     LOG_THREADPOOL("**** THREAD %p (PID %d) IS JOINING THE THREAD POOL\n", (void*)pthread_self(), getpid());
@@ -158,10 +160,7 @@ status_t IPCThreadState::getAndExecuteCommand()
         size_t IN = mIn.dataAvail();
         if (IN < sizeof(int32_t)) return result;
         cmd = mIn.readInt32();
-        IF_LOG_COMMANDS() {
-            alog << "Processing top-level Command: "
-                 << getReturnString(cmd) << endl;
-        }
+        //...
 
         pthread_mutex_lock(&mProcess->mThreadCountLock);
         mProcess->mExecutingThreadsCount++;
@@ -192,6 +191,70 @@ status_t IPCThreadState::getAndExecuteCommand()
 }
 ```
 这里的关键，一是`talkWithDriver()`，二是`executeCommand()`。`talkWithDriver()`方法会读出mIn和mOut，并调用ioctl执行到 binder_ioctl --> binder_ioctl_write_read --> binder_thread_write或binder_thread_read。也就是不断地和Binder通信，并执行命令。
+
+```
+status_t IPCThreadState::talkWithDriver(bool doReceive) //默认为true
+{
+    //...
+
+    binder_write_read bwr; // 准备发送给binder驱动的数据格式
+
+    // 是否需要读
+    const bool needRead = mIn.dataPosition() >= mIn.dataSize();
+
+    const size_t outAvail = (!doReceive || needRead) ? mOut.dataSize() : 0;
+
+    bwr.write_size = outAvail; // 要写入的数据大小
+    bwr.write_buffer = (uintptr_t)mOut.data(); // 要写入的数据
+
+    // This is what we'll read.
+    if (doReceive && needRead) {
+        bwr.read_size = mIn.dataCapacity(); // 要读取的数据大小
+        bwr.read_buffer = (uintptr_t)mIn.data(); // 存储读取的数据
+    } else {
+        bwr.read_size = 0;
+        bwr.read_buffer = 0;
+    }
+
+    //...
+    // 不需要读写就直接返回
+    if ((bwr.write_size == 0) && (bwr.read_size == 0)) return NO_ERROR;
+
+    bwr.write_consumed = 0;
+    bwr.read_consumed = 0;
+    status_t err;
+    do {
+        //...
+#if defined(__ANDROID__)
+        // 写入数据到Binder驱动的关键就是这里的ioctl
+        if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)
+            err = NO_ERROR;
+        //...
+    } while (err == -EINTR);
+
+    //...
+
+    if (err >= NO_ERROR) {
+        if (bwr.write_consumed > 0) { //成功写入了数据
+            if (bwr.write_consumed < mOut.dataSize())
+                mOut.remove(0, bwr.write_consumed); // 移除已经被Binder驱动读取的数据
+            else {
+                mOut.setDataSize(0);
+                processPostWriteDerefs();
+            }
+        }
+        if (bwr.read_consumed > 0) { //成功读取到了数据 
+            // 修正数据
+            mIn.setDataSize(bwr.read_consumed);
+            mIn.setDataPosition(0);
+        }
+        //...
+        return NO_ERROR;
+    }
+
+    return err;
+}
+```
 
 -----------------------------
 综上，每个进程启动后，都会调用open_binder打开binder驱动，然后调用mmap映射binder内核空间到应用空间，并循环读写并执行binder相关的命令
