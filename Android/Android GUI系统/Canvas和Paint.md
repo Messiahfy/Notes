@@ -100,18 +100,52 @@ Paint.Style.FILL_AND_STROKE       //描边加填充
 ###### 2.4 setStrokeMiter
 ![setStrokeMiter](https://upload-images.jianshu.io/upload_images/3468445-2ad8e6d19d17a7c7.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
-#### 3.设置颜色
-###### 3.1 setARGB
-###### 3.2 setAlpha 
-###### 3.3 setColor 
-###### 3.4 setColorFilter
+## 3.设置绘制内容（颜色和图像）
+### 3.1 setARGB
+### 3.2 setAlpha 
+### 3.3 setColor 
+### 3.4 setColorFilter
 在`setColor`前调用`setColorFilter`，会对`setColor`传入的颜色进行过滤转换，偏移转换成另一种颜色，转换规则根据传入的值而定。
+### 3.5 setShader(Shader shader)
+对绘制图形除了用颜色填充或描边外，还可以用位图或者渐变来填充（描边好像有点奇葩）。`Shader`渲染`Android`提供了**5**个子类，有`BitmapShader`，`ComposeShader`，`LinearGradient`，`RadialGradient`，`SweepGradient`。`Shader`中有一个`TileMode`，共有**3**种模式：
+`CLAMP`：当图片小于绘制尺寸时要进行边界拉伸来填充
+`REPEAT`：当图片小于绘制尺寸时重复平铺
+`MIRROR`：当图片小于绘制尺寸时镜像平铺
 
-#### 4.setPathEffect(PathEffect effect)
+> 用`Canvas`结合`Paint`设置`BitmapShader`来填充圆角矩形，可以实现圆角图片
+
+### 3.6 setMaskFilter(MaskFilter maskfilter)
+`MaskFilter`有两个子类，一个`BlurMaskFilter`一个是`EmbossMaskFilter`
+下面是`BlurMaskFilter`的效果
+![BlurMaskFilter效果](https://upload-images.jianshu.io/upload_images/3468445-421b24f4d0415657.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+而`EmbossMaskFilter`是实现对图像的浮雕效果，看起来像立体雕像。
+
+### 3.7 setShadowLayer(float radius, float dx, float dy, int shadowColor)
+绘制阴影如下：
+![setShadowLayer效果](https://upload-images.jianshu.io/upload_images/3468445-40259a2d6ce0c8b5.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+### 3.8 setDither(boolean dither)
+在内存中用`ARGB888`颜色模型表示图像，在该图像拷贝到屏幕帧缓冲区的过程中，它会变成`RGB565`颜色模式。`RGB565`最多只能表示2^16 =65536种图像，这对于`RGB888`所能表示的2^24 =16777216种颜色来说显然在表现力上要略逊一筹。这集中表现在显示某些带有渐变效果的图片时，出现了一条条的颜色带，而不是原始的平滑的渐变效果。使用抖动可以让效果更好。左边抖动，右边未抖动：
+![setDither](https://upload-images.jianshu.io/upload_images/3468445-0f5b18f752b7fac4.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+### 3.9 setColorFilter(ColorFilter filter)
+可以对绘制的`bitmap`的颜色进行转换（实现滤镜效果），应该对纯色而不是位图的绘制也可以转换，参考[Paint之ColorMatrix与滤镜效果](https://blog.csdn.net/harvic880925/article/details/51187277)和[Paint之setColorFilter](https://blog.csdn.net/harvic880925/article/details/51253944)
+
+### 3.10 setXfermode(Xfermode xfermode)
+Xfermode就是Transfer mode，可以实现图形混合，感觉像是在PS，暂时不管这里，参考[Paint之setXfermode](https://blog.csdn.net/harvic880925/article/details/51264653)
+
+`setFilterBitmap(boolean filter)` 网上说对位图滤波处理，可以抗锯齿
+`setAntiAlias(boolean aa) ` 设置画笔是否抗锯齿 
+`clearShadowLayer()` 清除阴影
+
+> 可以参考扔物线的自定义view文章 [Paint 详解](https://rengwuxian.com/ui-1-2/)
+
+## 4.setPathEffect(PathEffect effect)
 用于对`canvas.drawPath(path,paint)`画出的路径进行修饰，比如把折线的折角变为曲线，或者实线变虚线，**CornerPathEffect三角形等的角变圆角**等等。
 参考[setPathEffec介绍](https://blog.csdn.net/harvic880925/article/details/51010839)
 
-#### 5.字体相关
+## 5.字体相关
 `setTextSize(float textSize) `  设置文字大小 
 
 `setFakeBoldText(boolean fakeBoldText) ` 设置是否为粗体文字 
@@ -132,43 +166,7 @@ Paint.Align.RIGHT 作为文字的右端，向左绘制
 
 `setTypeface(Typeface typeface)` 字体样式 。加粗，倾斜，加粗并倾斜，正常，还可以从资源文件中加载自定义字体。
 
-#### 6.图像处理
-###### 6.1 setShader(Shader shader)
-对绘制图形除了用颜色填充或描边外，还可以用位图或者渐变来填充（描边好像有点奇葩）。`Shader`渲染`Android`提供了**5**个子类，有`BitmapShader`，`ComposeShader`，`LinearGradient`，`RadialGradient`，`SweepGradient`。`Shader`中有一个`TileMode`，共有**3**种模式：
-`CLAMP`：当图片小于绘制尺寸时要进行边界拉伸来填充
-`REPEAT`：当图片小于绘制尺寸时重复平铺
-`MIRROR`：当图片小于绘制尺寸时镜像平铺
-
-> 用`Canvas`结合`Paint`设置`BitmapShader`来填充圆角矩形，可以实现圆角图片
-
-###### 6.2 setMaskFilter(MaskFilter maskfilter)
-`MaskFilter`有两个子类，一个`BlurMaskFilter`一个是`EmbossMaskFilter`
-下面是`BlurMaskFilter`的效果
-![BlurMaskFilter效果](https://upload-images.jianshu.io/upload_images/3468445-421b24f4d0415657.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
-
-而`EmbossMaskFilter`是实现对图像的浮雕效果，看起来像立体雕像。
-
-###### 6.3 setShadowLayer(float radius, float dx, float dy, int shadowColor)
-绘制阴影如下：
-![setShadowLayer效果](https://upload-images.jianshu.io/upload_images/3468445-40259a2d6ce0c8b5.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
-
-
-###### 6.4 setDither(boolean dither)
-在内存中用`ARGB888`颜色模型表示图像，在该图像拷贝到屏幕帧缓冲区的过程中，它会变成`RGB565`颜色模式。`RGB565`最多只能表示2^16 =65536种图像，这对于`RGB888`所能表示的2^24 =16777216种颜色来说显然在表现力上要略逊一筹。这集中表现在显示某些带有渐变效果的图片时，出现了一条条的颜色带，而不是原始的平滑的渐变效果。使用抖动可以让效果更好。左边抖动，右边未抖动：
-![setDither](https://upload-images.jianshu.io/upload_images/3468445-0f5b18f752b7fac4.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
-
-
-###### 6.3 setColorFilter(ColorFilter filter)
-可以对绘制的`bitmap`的颜色进行转换（实现滤镜效果），应该对纯色而不是位图的绘制也可以转换，参考[Paint之ColorMatrix与滤镜效果](https://blog.csdn.net/harvic880925/article/details/51187277)和[Paint之setColorFilter](https://blog.csdn.net/harvic880925/article/details/51253944)
-
-###### 6.4 setXfermode(Xfermode xfermode)
-实现图形混合，感觉像是在PS，暂时不管这里，参考[Paint之setXfermode](https://blog.csdn.net/harvic880925/article/details/51264653)
-
-`setFilterBitmap(boolean filter)` 网上说对位图滤波处理，可以抗锯齿
-`setAntiAlias(boolean aa) ` 设置画笔是否抗锯齿 
-`clearShadowLayer()` 清除阴影
-
-#### 7.测量相关
+## 6.测量相关
 `measureText` 获得文字的宽度
 `getTextBounds` 获得文字的宽高
 `getTextSize` 获得文字的尺寸

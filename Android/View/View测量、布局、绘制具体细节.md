@@ -1,4 +1,4 @@
-#### 1.构造函数
+## 1.构造函数
 &emsp;&emsp;在构造函数中，初始化和拿到自定义的属性值，使用完`typedArray`后需要`recycle`回收
 &emsp;&emsp;第一个构造函数用于在代码中`new`，第二个用于`xml`加载。第三和第四个不会自动调用，需要自己在第一或第二个中来调用。
 
@@ -10,8 +10,8 @@
 <br>
 > 下面的测量、布局、绘制三大流程可参考`DecorView`-->`FrameLayout`-->`View`来分析，`DecorView`是最终的根布局。
 
-#### 2.Measure测量
-###### 2.1 MeasureSpec
+## 2.Measure测量
+### 2.1 MeasureSpec
 MeasureSpec是一个int数值，通过`MeasureSpec.getMode(int measureSpec)`和`MeasureSpec.getSize(int measureSpec)`可以获得其模式和尺寸。<br/>
 模式有三种：
 * `MeasureSpec.EXACTLY` 表示父控件希望子控件使用确定的尺寸
@@ -20,7 +20,7 @@ MeasureSpec是一个int数值，通过`MeasureSpec.getMode(int measureSpec)`和`
 
 `MeasureSpec.getSize(int measureSpec)`在`MeasureSpec.EXACTLY`模式下一般即确定的尺寸，在`MeasureSpec.AT_MOST`模式下一般即父控件尺寸。（使用“一般”这个词是因为自定义View时可以故意任意设定，但当然建议符合默认逻辑）
 
-###### 2.2 MeasureSpec的设定
+### 2.2 MeasureSpec的设定
 最初的`widthMeasureSpec`和`heightMeasureSpec`是在ViewRootImpl中的performTraversals()-->measureHierarchy-->getRootMeasureSpec中生成
 
 &emsp;&emsp;**自定义View**时根据`widthMeasureSpec`和`heightMeasureSpec`中的模式和尺寸，以及自定义View的特定情况，在最后调用`setMeasuredDimension`，确定测量的宽高。
@@ -34,7 +34,7 @@ MeasureSpec是一个int数值，通过`MeasureSpec.getMode(int measureSpec)`和`
 &emsp;&emsp;每个`ViewGroup`都有`LayoutParams`内部类，`xml`布局文件解析时会根据子`view`设置的`layout_width`等属性为子`view`设置`LayoutParams`（也可以代码设定），`ViewGroup`根据子`Veiw`的`LayoutParams`决定传给子`View`的`Measure`和`onMeasure`的`widthMeasureSpec`和`heightMeasureSpec`。<br/>
 &emsp;&emsp;`onMeasure`中的两个参数都是由父视图传来，是由父视图根据子视图的`layoutParams`中的`lp.width`、`lp.marginLeft`等信息生成（可参照`FrameLayout`的`onMeasure`方法，其中调用父类`ViewGroup`的`measureChildWithMargins`，`measureChildWithMargins`中调用`getChildMeasureSpec`，此中设置了`MeasureSpec`的`mode`和`size`，并传给子视图）
 
-#### 3.Layout 布局
+## 3.Layout 布局
 每个View都是先被父控件调用了`layout(int l, int t, int r, int b)`方法，其中会先调用`setFrame(int l, int t, int r, int b)`更新mLeft、mTop、mRight、mBottom，并调用`invalidate`。`setFrame`之后调用`onLayout(boolean changed, int l, int t, int r, int b)`，View不用重写，ViewGroup需要重写来确定child的位置。
 * onLayout
 
@@ -42,15 +42,19 @@ MeasureSpec是一个int数值，通过`MeasureSpec.getMode(int measureSpec)`和`
          viewGroup子类才需要重写，其中对每个子view都要调用它的layout，设定它相对于本viewGroup的位置
          传入layout和onLayout的都是相对于父布局的左、上、右、下位置，ViewGroup根据自身布局特定及子View的尺寸和margin来设定子view的layout方法的传入位置参数。
 
-#### 4.Draw 绘制
+## 4.Draw 绘制
 draw(canvas)方法会先drawBackground(canvas)，然后调用onDraw(canvas)绘制自身，接着调用dispatchDraw(canvas)绘制children。
 绘制child会调用drawChild(Canvas canvas, View child, long drawingTime)，其中继而调用draw(canvas)-->onDraw(canvas)
 * onDraw
              一般只有自定义View才重写，用于绘图
 
 
-#### 5.引发重新布局和绘制
+## 5.引发重新布局和绘制
 requestLayout()：调用onMeasure()和onLayout()。会调用rootViewImpl的requestLayout。（如果当前View在请求布局的时候，View树正在进行布局流程的话，该请求会延迟到布局流程完成后或者绘制流程完成且下一次布局发现的时候再执行）
 
 invalidate()：只调用本view的onDraw()。当子View调用了invalidate()方法后，会为该View添加一个标记位，同时不断向父容器请求刷新，父容器通过计算得出自身需要重绘的区域，直到传递到ViewRootImpl中，最终触发performTraversals方法，进行开始View树重绘流程(只绘制需要重绘的视图)。
-       
+
+自定义view
+https://ke.qq.com/course/313640?taid=2323607372220712
+https://ke.qq.com/course/314344?taid=2415429478042600
+https://ke.qq.com/course/314351?taid=2363241330428911

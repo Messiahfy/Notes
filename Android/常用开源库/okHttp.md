@@ -116,7 +116,7 @@ private fun promoteAndExecute(): Boolean {
   return isRunning
 }
 ```
-如果没有超过最大请求数量，就从readyAsyncCalls中移除call，然后添加到runningAsyncCalls队列中，然后执行asyncCall于executorService线程池。
+如果没有超过最大请求数量，就从readyAsyncCalls中移除call，然后添加到runningAsyncCalls队列中，然后执行asyncCall于executorService线程池。如果超过最大请求数，或者一个host超过5个请求，都不会执行，而在已执行的请求结束后，会再次调用`promoteAndExecute`来执行剩余的请求。
 
 AsyncCall是RealCall的内部类，它被放在线程池中执行，它的run方法中仍然是调用`getResponseWithInterceptorChain()`，然后会回调callback。
 
@@ -375,7 +375,7 @@ override fun intercept(chain: Interceptor.Chain): Response {
         }
       }
     }
-    // 如果请求方法是 POST、PATCH、PUT、DELETE、MOVE，则清楚networkRequest对应的缓存
+    // 如果请求方法是 POST、PATCH、PUT、DELETE、MOVE，则清除networkRequest对应的缓存
     if (HttpMethod.invalidatesCache(networkRequest.method)) {
       try {
         cache.remove(networkRequest)

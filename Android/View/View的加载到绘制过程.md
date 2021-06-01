@@ -55,7 +55,7 @@ void scheduleTraversals() {
 &emsp;&emsp;`scheduleTraversals`方法中先发送同步屏障，然后发送包含`mTraversalRunnable`的异步消息，保证此异步消息先执行，即先执行`doTraversal()`方法，保证视图及时刷新。
 关于**同步屏障**可以参考[这篇文章](https://blog.csdn.net/asdgbc/article/details/79148180)
 
-&emsp;&emsp;`Choreographer`的`postCallback`方法会把`mTraversalRunnable`放到一个回调队列数组中，然后调用`scheduleFrameLocked`->`scheduleVsyncLocked`，最终调用`Native`方法向底层注册监听下一个屏幕刷新信号`VSync`，当下一个`VSync`发出时，底层就会回调 `Choreographer `的`onVsync()` ；
+&emsp;&emsp;`Choreographer`的`postCallback`方法会把`mTraversalRunnable`放到一个回调队列数组中，然后调用`scheduleFrameLocked`->`scheduleVsyncLocked`，最终调用`Native`方法向底层注册监听下一个屏幕刷新信号`VSync`（只会监听下一次VSync，再次监听需要再次注册），当下一个`VSync`发出时，底层就会回调 `Choreographer `的`onVsync()`；
 &emsp;&emsp;`onVsync() `方法被回调时，会往主线程的消息队列中发送一个执行 `doFrame() `方法的消息，这个消息是异步消息，所以不会被同步屏障拦截住；
 &emsp;&emsp;`doFrame() `方法会去取出之前放进回调队列数组里的任务`mTraversalRunnable`来执行，取出来的这个任务实际上是` ViewRootImpl `的 `doTraversal()` 操作
 可参考[屏幕刷新机制1](https://blog.csdn.net/qian520ao/article/details/80954626)和[屏幕刷新机制2](https://www.cnblogs.com/dasusu/p/8311324.html)
@@ -88,7 +88,7 @@ void doTraversal() {
 
 draw(Canvas canvas, ViewGroup parent, long drawingTime)中，分为软件和硬件绘制：
 1. 软件绘制：会执行 canvas.clipRect(sx, sy, sx + getWidth(), sy + getHeight())来剪切，使child只绘制在自己范围内，除非设置clipChildren为false
-2.硬件绘制：updateDisplayListIfDirty --> setDisplayListProperties内有判断getClipChildren来决定是否执行setClipToBounds
+2. 硬件绘制：updateDisplayListIfDirty --> setDisplayListProperties内有判断getClipChildren来决定是否执行setClipToBounds
 
 
 **绘制流程中注意的是**，`view`的`onMeasure`只管自己，`ViewGroup`还要管子`view`。`view`一般不用重写`onLayout`，`ViewGroup`需要在`onLayout`中调用子`View`的`layout`为其设置布局位置。`view`重写`onDraw`绘制，`ViewGroup`一般不用重写`onDraw`。

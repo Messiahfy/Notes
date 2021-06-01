@@ -33,7 +33,7 @@ add_executable(test main.cpp)
 CMake的命令，不区分大小写。这三个命令的作用如下：
 1. `cmake_minimum_required`：指定运行此配置文件所需的 CMake 的最低版本
 2. `project`：参数值是 Test，该命令表示项目的名称是 Test
-3. `add_executable1`：将名为 main.cpp 的源文件编译成名为 test 的可执行文件
+3. `add_executable`：将名为 main.cpp 的源文件编译成名为 test 的可执行文件
 
 2. 然后执行cmake命令：
 ```

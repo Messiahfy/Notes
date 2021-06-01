@@ -1,3 +1,7 @@
+https://www.bilibili.com/video/BV1DE411Z7nt?p=2
+
+https://docs.gradle.org/current/userguide/getting_started.html
+
 ## 2.task
 ```
 task  helloWorld {

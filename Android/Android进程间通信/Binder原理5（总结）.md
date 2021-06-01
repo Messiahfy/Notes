@@ -14,8 +14,11 @@
 
 
 ### 通过bindService的跨进程通信情况
-1. 使用bindService的方式跨进程通信，没有通过ServiceManager，而是通过AMS（当然，通过SM才能找到AMS）。服务端返回的IBinder一般是AIDL生产的类的实例，继承自Binder，Binder的构造函数中会创建对应的native层对象。通过Binder驱动把该IBinder对象传给客户端，先通过Parcel的`flatten_binder`把IBinder转换为`flat_binder_object`类型，因为现在是把本进程的IBinder写入，会设置BINDER_TYPE_BINDER。
+1. 使用bindService的方式跨进程通信，没有通过ServiceManager，而是通过AMS（当然，通过SM才能找到AMS）。服务端返回的IBinder一般是AIDL生产的类的实例，继承自Binder，Binder的构造函数中会创建对应的native层对象。通过Binder驱动把该IBinder对象传给客户端，先通过Parcel的`flatten_binder`把IBinder转换为`flat_binder_object`类型，会包含此Binder对象的指针，因为现在是把本进程的IBinder写入，会设置BINDER_TYPE_BINDER。
 2. Binder驱动中，`binder_transaction`方法的BINDER_TYPE_BINDER分支，binder_get_ref_for_node会为这个IBinder对应的binder_ref类型生成desc值，也就会成flat_binder_object的handle值。
-3. 然后这个flat_binder_object再传到客户端，并还原成IBinder，就已经包含了handle值，所以客户端用它发起跨进程调用，是可以在Binder驱动中找到对应的进程的。
+3. 然后这个flat_binder_object再传到客户端，并还原成IBinder，就已经包含了handle值，所以客户端用它发起跨进程调用，是可以在Binder驱动中找到对应的进程的，并且通过指针会找到具体的那个远程Binder对象，去执行BBinder.onTrascat。
+
+Client：Proxy--BinderProxy--BpBinder
+Server：Stub--Binder--BBinder
 
 复习时可以对照“听说你Binder机制学的不错，来面试下这几个问题”检验理解程度。
