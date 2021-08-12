@@ -26,7 +26,7 @@ void runApp(Widget app) {
 ```
 这里执行了三步代码，我们分别进行分析。
 
-### ensureInitialized
+### 1. ensureInitialized
 首先执行`WidgetsFlutterBinding`的`ensureInitialized`方法：
 ```
 class WidgetsFlutterBinding extends BindingBase with GestureBinding, SchedulerBinding, ServicesBinding, PaintingBinding, SemanticsBinding, RendererBinding, WidgetsBinding {
@@ -146,7 +146,7 @@ void initInstances() {
 ```
 1. 创建`PipelineOwner`，管理渲染流水线
 2. 给`window`设置各种回调，比如屏幕尺寸、密度等变化
-3. 创建并初始化`RenderView`，下一帧将被绘制。`RenderView`就是`RenderObject`绘制树的根。initRenderView函数内部赋值renderView，而renderView重写了setter，会引发全部`RenderObject`调用`attach`
+3. 创建并初始化`RenderView`，下一帧将被绘制。`RenderView`就是`RenderObject`绘制树的根。initRenderView函数内部赋值renderView，而renderView重写了setter，会使`RenderView`调用`attach`，持有`PipelineOwner`
 4. 向添加`SchedulerBinding`的`_persistentCallbacks`中添加回调，回调内容为执行渲染流水线
 
 第七个是`WidgetsBinding`
@@ -175,7 +175,7 @@ void initInstances() {
 
 `RendererBinding`中创建的`PipelineOwner`和这里的`BuildOwner`，是关于渲染流程的关键类
 
-### scheduleAttachRootWidget
+### 2. scheduleAttachRootWidget
 `runApp`函数中，执行的第二步就是`scheduleAttachRootWidget`
 ```
 void scheduleAttachRootWidget(Widget rootWidget) {
@@ -237,11 +237,15 @@ class RenderObjectToWidgetAdapter<T extends RenderObject> extends RenderObjectWi
   }
 }
 ```
-省略了其他属性和方法。调用`attachToRenderTree`，就会调用`createElement`，这里就会创建`RenderObjectToWidgetElement`，并且指定了`BuildOwner`。然后调用回调，也就是`element.mount`，将把`RenderObjectToWidgetElement`加入到`Element`树中，并调用build，引发`rootWidget`的widget树递归构造Element树和RenderObject树。然后会build所有标记为dirty的element，第一次调用应该还没有标记为dirty的element。
+省略了其他属性和方法。调用`attachToRenderTree`，就会调用`createElement`，这里就会创建`RenderObjectToWidgetElement`，并且指定了`BuildOwner`。然后调用回调，也就是`element.mount`，将把`RenderObjectToWidgetElement`加入到`Element`树中，并调用`_rebuild()`，因为`Element`在创建时就持有对应的`Widget`，所以像`SingleChildRenderObjectElement`或者`ComponentElement`之类的有子Element的`Element`会使用`widget.child`来构造自己的子`Element`，递归`mount`完成Element树的构建。其中，如果是`RenderObjectElement`，会创建实际涉及布局绘制的`RenderObject`，`attachRenderObject`方法中会找到最近的祖先`RenderObjectElement`，并把当前的`RenderObject`作为祖先`RenderObjectElement`内的`renderObject`的child。然后会调用到`RenderObjectWithChildMixin`内的setter方法，又调用`adoptChild`，这里会调用`markNeedsLayout`等，建立父子关联，和调用`attach`设置`PipelineOwner`。
+
+> markNeedsLayout内会判断_relayoutBoundary，一般会一直标记parent，而不是自己，直到根renderView，因为renderView调用scheduleInitialLayout把_relayoutBoundary设为自己。所以只会把某一个层级的parent添加到_nodesNeedingLayout。后续布局时，从这个parent开始，递归调用layout。
+
+Widget和Element树是一一对应的，但RenderObject树则只有实际需要布局绘制的节点，而类似StatelessWidget是没有对应的RenderObject。
 
 可见`scheduleAttachRootWidget`流程的关键，就是把根Widget(`RenderObjectToWidgetAdapter`)和`RenderView`关联起来，并且把我们的`rootWidget`加入到了根Widget树中，一起构造了Widget、Element、RenderObject三颗树。
 
-### scheduleWarmUpFrame
+### 3. scheduleWarmUpFrame
 然后到最后一步，将调度执行渲染
 
 ```
