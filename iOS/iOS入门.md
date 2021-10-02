@@ -1,11 +1,16 @@
+> Xcode中的 Developer Documentation 的文档比较详细和集中。
 ## 布局
 ### 代码布局
-Frame布局：UIView的Frame用于代码中构建布局，基于父布局的坐标；bounds为自身的宽高，以及bounds.origins可以做偏移
-autoresizing
-AutoLayout Constraint布局
+Frame布局：UIView的Frame用于代码中构建布局，基于父布局的坐标。以坐标和确切宽高为布局方式，局限性较大。
+Autoresizing：跟随父布局的bounds（和frame、center是关联变换的）变化调整自身大小。
+AutoLayout：约束布局，现在的主要布局方式。和Autoresizing不能共存
+SizeClass：依赖于AutoLayout，对不同尺寸的屏幕作区分。例如希望某个控件在横屏显示，竖屏不显示的话，可以使用SizeClass。
+
+* iOS布局没有Android的各种布局控件，没有严格区分View和ViewGroup，也没有wrap_content和match_parent这样的宽高属性，设计思路不一样。比如使用Frame布局，UIScrollView的内容高度需要自己计算，不会像Android那样自适应，如果使用自动布局的话，可以做到自适应。
+* frame是当前view在父view中的左上角坐标和宽高；bounds是基于自身的坐标系；由于child的frame基于parent，修改parent的bounds的origin，child的位置就会发生改变，比如滚动。
 
 ### Storyboard
-可视化布局。容易产生冲突，不一定使用
+可视化布局。
 
 ## View Controller
 一个view controller是UIViewController的子类，view controller管理视图层次结构。 它负责创建构成层次结构的视图对象，并负责处理与层次结构中的视图对象相关的事件。作为UIViewController的子类，都继承了一个重要的属性：
@@ -32,13 +37,52 @@ view controller可以嵌套，**UITabBarController**可以用于切换view contr
 
 通常，您将需要对Interface Builder中定义的子视图进行一些额外的初始化或配置，然后才能向用户显示。 那么在哪里可以访问子视图？ 有两个主要选项，具体取决于您需要执行的操作。 第一个选项是`viewDidLoad()`方法。加载视图控制器的界面文件后，将调用此方法，届时所有视图控制器的插座都将引用适当的对象。第二个选项是另一个UIViewController方法`viewWillAppear(_ :)`。 在将视图控制器的视图添加到窗口之前，将调用此方法。如果在应用程序运行期间仅需要配置一次，则覆盖`viewDidLoad()`。 如果您需要在每次视图控制器的视图出现在屏幕上时都需要进行配置，则覆盖`viewWillAppear(_ :)`。
 
-#### 与view controller及其view进行交互
+>iOS有交互设计的一套规范，所以需要了解UIKit内各个部分的相互关系。比如任何UIViewController都可以设置title属性，如果此UIViewController用于UINavigationController/UITabBarController，那么就会作为navigationItem/tabBarItem的title。但也存在自定义情况的不便。
+
+### 与viewController及其view交互
 view controller及其view的生命周期中调用的一些方法:
 * `init(coder:)`是view controller实例从storyboard中创建时的初始化方法，从storyboard创建view controller实例时，`init(coder:)`方法会被调用一次
 * `init(nibName:bundle:)` 是UIViewController的指定初始化器。在不使用storyboard的情况下创建视图控制器实例时，其`init(nibName:bundle:)`会被调用一次。 请注意，在某些应用中，您可能最终会创建同一视图控制器类的多个实例。创建每个视图控制器时，将调用此方法一次。
 * `loadView()`被重写可以以编程方式创建视图控制器的视图。
 * `viewDidLoad()`被重写可以配置从界面文件创建的view。这个方法创建视图控制器的视图后被调用。
 * `viewWillAppear(_:)`被重写以配置通过加载界面文件创建的view。每次将视图控制器显示到屏幕时，都会调用此方法和`viewDidAppear(_ :)`。每当将视图控制器移出屏幕时，都会调用`viewWillDisappear(_ :)`和`viewDidDisappear(_ :)`。
+
+ViewController可以作为容器，嵌套其他ViewController。
+
+添加child ViewController：
+```
+addChild(viewController)                // 1.构建ViewController之间的关系
+view.addSubview(viewController.view)    // 2.将child ViewController的view添加到 container ViewController的view中
+// ...                                  // 3.设置viewController.view的布局约束
+viewController.didMove(toParent: self)  // 4.通知child ViewController已完成过渡
+```
+
+移除child ViewController：
+```
+childViewController.willMove(nil)               // 1.通知child ViewController将执行过渡
+//...                                           // 2.停用（Deactivate）或者删除对child的根view的布局约束
+childViewController.view.removeFromSuperview()  // 3.将view从视图层次中移除
+childViewController.removeFromParent()          // 4.终止ViewController的父子关系
+```
+
+UIViewController的几个跳转方法的使用情况：
+| ViewController | show | showDetailViewController | present |
+|---|---|---|---|
+|默认UIViewController|present|present|present|
+|UINavigationController|pushViewController|present|present|
+|UITabBarController|无作用|无作用|无作用|
+|UISplitViewController（常规，例如iPad）|替换主ViewController|替换详情ViewController|present|    是否从主
+|UISplitViewController（紧凑，例如iPhone）|present|present|present|
+> UISplitViewController的情况均为在主ViewController中调用。如果在详情ViewController中调用show也只能替换自身。
+
+转场（Transition。包含Navigation、Tabbar和普通Modal转场）和呈现方式（Presentation，例如是否全屏呈现）都可以自定义：参考官方文档[Customizing the Transition Animations](https://developer.apple.com/library/archive/featuredarticles/ViewControllerPGforiPhoneOS/CustomizingtheTransitionAnimations.html#//apple_ref/doc/uid/TP40007457-CH16-SW1)和[Creating Custom Presentations](https://developer.apple.com/library/archive/featuredarticles/ViewControllerPGforiPhoneOS/DefiningCustomPresentations.html#//apple_ref/doc/uid/TP40007457-CH25-SW1)，以及[官方示例代码](https://developer.apple.com/library/archive/samplecode/CustomTransitions/Introduction/Intro.html#//apple_ref/doc/uid/TP40015158)
+
+* UIViewControllerTransitioningDelegate：用于任何UIViewController的Modal转场
+* UINavigationControllerDelegate：可用于UINavigationController的push、pop转场
+* UITabBarControllerDelegate：可用于UITabBarController的tab切换转场
+
+### 对ViewController的看法
+iOS的ViewController，可以管理整个屏幕界面，也可以管理局部界面，另外也有类似Android中的ViewPager这样的UIPageViewController，所以ViewController可以拥有Android中Activity、Fragment、Viewgroup（UIView也可以既是Android的View又是ViewGroup）的功能。
 
 ## 数据存储、加载、状态恢复
 1. archiving是在iOS中持久保存模型对象的最常用方法之一。 归档对象涉及记录其所有属性并将其保存到文件系统。取消存档会根据该数据重新创建对象。（对象序列化）
