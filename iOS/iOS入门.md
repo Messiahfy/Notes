@@ -12,6 +12,11 @@ SizeClass：依赖于AutoLayout，对不同尺寸的屏幕作区分。例如希�
 ### Storyboard
 可视化布局。
 
+### SafeArea
+安全区域描述的是控件不会被状态栏、tabBar、navigationBar等遮挡的区域。例如普通UIViewController的安全区域就是去掉状态栏、底部工具栏的区域，而UINavigationViewController还要去掉导航栏。
+* UIView.safeAreaInsets：只读属性。在UIViewController的safeAreaInsetsDidChange()回调时，UIViewController的root view的safeAreaInsets就被系统设置好了，其他view则要在完成布局viewDidLayoutSubviews()回调后，系统才会根据其被遮挡的情况设置它的safeAreaInsets。主要用于frame布局。
+* UIView.safeAreaLayoutGuide：用于自动布局。
+
 ## View Controller
 一个view controller是UIViewController的子类，view controller管理视图层次结构。 它负责创建构成层次结构的视图对象，并负责处理与层次结构中的视图对象相关的事件。作为UIViewController的子类，都继承了一个重要的属性：
 ```
