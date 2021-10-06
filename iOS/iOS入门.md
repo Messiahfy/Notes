@@ -6,9 +6,10 @@ Autoresizing：跟随父布局的bounds（和frame、center是关联变换的）
 AutoLayout：约束布局，现在的主要布局方式。和Autoresizing不能共存
 SizeClass：依赖于AutoLayout，对不同尺寸的屏幕作区分。例如希望某个控件在横屏显示，竖屏不显示的话，可以使用SizeClass。
 
-* iOS布局没有Android的各种布局控件，没有严格区分View和ViewGroup，也没有wrap_content和match_parent这样的宽高属性，设计思路不一样。比如使用Frame布局，UIScrollView的内容高度需要自己计算，不会像Android那样自适应，如果使用自动布局的话，可以做到自适应。
 * frame是当前view在父view中的左上角坐标和宽高；bounds是基于自身的坐标系；由于child的frame基于parent，修改parent的bounds的origin，child的位置就会发生改变，比如滚动。
-
+* iOS布局没有Android的各种布局控件，没有严格区分View和ViewGroup，也没有wrap_content和match_parent这样的宽高属性，设计思路不一样。比如使用Frame布局，UIScrollView的内容宽高需要自己计算，不会像Android那样自适应，如果使用自动布局的话，可以做到自适应。
+* 自动布局中，虽然也可以主动设置UIScrollView的内容宽高，但是实际还是自适应宽高更合理。给UIScrollView设置它和父布局的上下左右约束，只是给UIScrollView确定了宽高，而它的内容宽高还需要对UIScrollView的子view们设置合理的约束，才能得到确定的内容宽高。例如最常见的内容宽度和UIScrollView等宽，内容高度自适应的情况：至少要有一个子view的左右约束设置到UIScrollView，并且该子view要设置宽度约束或者水平位置约束，纵向的情况也是这样，必须要有上下约束到UIScrollView，以及高度或竖直位置约束，高度自适应的情况下多个子View一般会形成上至UIScrollView、中间链式、底部到UIScrollView的约束。
+（类似UILabel这种根据文字内容自行确定宽高的可以仅设置上下左右约束）
 ### Storyboard
 可视化布局。
 
