@@ -117,3 +117,7 @@ https://source.android.google.cn/devices/graphics
 
 1. 布局优化：耗时在于加载xml和反射。减少嵌套，merge，避免过度绘制，异步加载（用的少），xml转代码（部分属性不能用代码设置，编译时间长），compose
 2. 卡顿监控：消息执行、Vsync回调
+
+## 监控
+卡顿监控：Looper.setMessageLogging，监控每个消息的执行时间。
+FPS监控：Choreographer.postFrameCallback。不能直接使用两次回调的时间差，例如一次回调在第一帧的开始，二次回调在第二帧的末尾，最大间隔可以接近32ms，所以还应该通过反射获取Choreographer.mFrameInfo里面的VSYNC等时间数据，综合计算。
