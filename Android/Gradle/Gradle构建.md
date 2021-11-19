@@ -705,28 +705,26 @@ publishing {
 }
 ```
 > `maven-publish`插件的详细文档：https://docs.gradle.org/current/userguide/publishing_maven.html
+
+> 发布插件的官方文档：https://docs.gradle.org/current/userguide/publishing_gradle_plugins.html
+
 > Gradle内置的核心插件的特殊之处在于它们提供短名称，例如JavaPlugin：'java'，所有其他二进制插件必须使用插件 id 的完全限定形式（例如com.github.foo.bar）
 
+### init Script
+在普通构建脚本执行前率先执行的脚本，用得较少。[官方文档](https://docs.gradle.org/current/userguide/init_scripts.html#sec:using_an_init_script)
 
+### Gradle 守护进程
+每次初始化一个构建时，JVM都要启动一次，Gradle的依赖要载入到类加载器中，还要建立项目对象模型，这个过程要花好几秒，守护进程可以解决这个问题。守护进程以后台进程方式运行Gradle。一旦启动，gradle命令就会在后续的构建中重用之前的创建的守护进程，以避免启动时造成的开销。
 
-
-
-initScript  https://docs.gradle.org/current/userguide/init_scripts.html
-
-Build Cache https://docs.gradle.org/current/userguide/build_cache.html  https://docs.gradle.org/current/userguide/performance.html
-
-
-* Gradle 守护进程
-&emsp;&emsp;每次初始化一个构建时，JVM都要启动一次，Gradle的依赖要载入到类加载器中，还要建立项目对象模型，这个过程要花好几秒，守护进程可以解决这个问题。守护进程以后台进程方式运行Gradle。一旦启动，gradle命令就会在后续的构建中重用之前的创建的守护进程，以避免启动时造成的开销。
-&emsp;&emsp;在命令行中启动Gradle守护进程很简单：在运行gradle命令时加上--daemon选项。为了验证守护进程在运行，可以查看系统进程列表：
+在命令行中启动Gradle守护进程很简单：在运行gradle命令时加上--daemon选项。为了验证守护进程在运行，可以查看系统进程列表：
 `MacOS / *nix`：ps | grep gradle
 `Windows`: 任务管理器查看进程
 
 后续的gradle命令都会重用守护进程，守护进程只会创建一次，即使在命令行中加上--daemon选型。守护进程会在3小时空闲时间只会自动过期。任何时候可以选择执行构建时不使用守护进程，只需添加命令行选型--no-daemon。要手动停止守护进程，可以执行gradle --stop。
 
 
-###### 4.1.3 Property
-&emsp;&emsp;每个`Project`和`Task`实例都提供了可以通过`getter`和`setter`方法访问的属性。一个属性可能是一个任务的描述或项目的版本。通常需要定义自己的属性，Gradle允许用户通过扩展属性自定义一些变量。
+### Property
+每个`Project`和`Task`实例都提供了可以通过`getter`和`setter`方法访问的属性。一个属性可能是一个任务的描述或项目的版本。通常需要定义自己的属性，Gradle允许用户通过扩展属性自定义一些变量。
 > 直接定义的一般的变量，比如def a=1，无法通过`project.a`的形式访问，
 * 扩展属性
 添加属性可以使用`ext`命名空间。
@@ -744,7 +742,7 @@ println project.otherProp1
 println project.ext.otherProp2
 ```
 
+## 依赖管理
+Gradle中，使用`repositories`闭包来配置从哪里获取依赖，使用`dependencies`来配置需要依赖的类库。我们平时基本的都是使用简单的直接配置，在这种默认情况下，如果我们的项目依赖A和B，B的版本为1.0，但是A依赖了B的1.1版本，那么Gradle会最终使用版本更高的1.1版本的B。
 
-首先使用`dependencies`脚本来定义构建所依赖的类库，其次，使用`repositories`闭包告诉构建从哪里获取依赖。有了这些信息，Gradle会自动解决依赖关系，下载所需要的依赖，将它们存储在本地缓存中。如果遇到依赖冲突，依赖管理就会变得麻烦。
-
-
+如果需要自定义解决依赖冲突的逻辑，可以参考官方文档，了解依赖的约束控制。另外，声明版本也可以使用范围，而不是确定的版本。
