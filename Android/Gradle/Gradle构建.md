@@ -746,3 +746,18 @@ println project.ext.otherProp2
 Gradle中，使用`repositories`闭包来配置从哪里获取依赖，使用`dependencies`来配置需要依赖的类库。我们平时基本的都是使用简单的直接配置，在这种默认情况下，如果我们的项目依赖A和B，B的版本为1.0，但是A依赖了B的1.1版本，那么Gradle会最终使用版本更高的1.1版本的B。
 
 如果需要自定义解决依赖冲突的逻辑，可以参考官方文档，了解依赖的约束控制。另外，声明版本也可以使用范围，而不是确定的版本。
+
+`dependencies`中常用的`implementation`、`api`、`compileOnly`、`runtimeOnly`等，都是java的gradle插件提供的`Configuration`，Gradle的依赖是以`Configuration`来分组的，`Configuration`之间也可以存在继承关系，例如`testImplementation`会继承`implementation`的依赖。java的gradle插件会把`implementation`的依赖加入编译时和运行时的类路径，`compileOnly`的依赖只会加入编译时的类路径。我们也可以自定义`Configuration`。`Configuration`类中有resolutionStrategy，可以配置选择依赖版本的策略。
+
+使用`implementation`等`Configuration`生成的方法，会返回`Dependency`子类，例如`ModuleDependency`，所以可以使用`exclude`之类的方法来配置配置版本规则：
+```
+dependencies {
+   implementation('org.hibernate:hibernate:3.1') {
+     //excluding a particular transitive dependency:
+     exclude module: 'cglib' //by artifact name
+     exclude group: 'org.jmock' //by group
+     exclude group: 'org.unwanted', module: 'iAmBuggy' //by both name and group
+   }
+ }
+```
+可以查看API文档，了解更多的配置方法。
