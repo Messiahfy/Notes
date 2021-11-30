@@ -1,16 +1,9 @@
-livedata Dao的函数返回LiveData，响应式
-
-InvalidationTracker#createLiveData
-
-
-
-kotlin 协程 Dao的函数返回Flow，响应式
-
-CoroutinesRoom#createFlow
-
-
-
-rxjava 响应式
+## Room的响应式
+* LiveData：查询函数返回LiveData类型。源码对应InvalidationTracker#createLiveData
+* kotlin协程：查询函数返回Flow。源码对应CoroutinesRoom#createFlow
+* RxJava
 
 @Query 方法：Room 支持 Publisher、Flowable 和 Observable 类型的返回值。
 @Insert、@Update 和 @Delete 方法：Room 2.1.0 及更高版本支持 Completable、Single<T> 和 Maybe<T> 类型的返回值。
+
+> Room的编译时注解处理代码中，会对Kotlin协程、RxJava之类的返回类型做支持，而且还支持了Paging库的DataSource.Factory（Paging2）、PagingSource（Paging3），所以在使用Room的时候，可以自己到[源码](https://androidx.tech/artifacts/room/room-compiler/2.3.0-source/androidx/room/ext/javapoet_ext.kt.html)中去了解还支持了哪些类型，文档中可能并不一定都详细说明。
