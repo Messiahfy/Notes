@@ -1,6 +1,7 @@
 ## 1.概述
-&emsp;&emsp;`scrollTo()`或`scrollBy()`方法不能移动自身，而是移动自身的内容，自身位置并不会改变，所以响应事件的位置也不会改变。这样看来`scrollTo()`或`scrollBy()`方法并不好用，但其实当对一个`ViewGroup`类型例如`ScrollView`这类的容器调用`scrollTo()`或`scrollBy()`方法，会移动它里面的内容，移动的内容的位置会发生改变，内容的响应事件位置也会改变，所以一般将`scrollTo`或`scrollBy`方法用于可以滑动内容的容器视图。
-&emsp;&emsp;但仅仅使用`scrollTo()`或`scrollBy()`方法，是瞬间把内容滑到某位置。而要实现渐进式滑动内容，一般使用**Scroller**。
+`scrollTo()`或`scrollBy()`方法不能移动自身，而是移动自身的内容，自身位置并不会改变，所以响应事件的位置也不会改变。这样看来`scrollTo()`或`scrollBy()`方法并不好用，但其实当对一个`ViewGroup`类型例如`ScrollView`这类的容器调用`scrollTo()`或`scrollBy()`方法，会移动它里面的内容，移动的内容的位置会发生改变，内容的响应事件位置也会改变，所以一般将`scrollTo`或`scrollBy`方法用于可以滑动内容的容器视图。
+
+但仅仅使用`scrollTo()`或`scrollBy()`方法，是瞬间把内容滑到某位置。而要实现渐进式滑动内容，一般使用**Scroller**。
 > **要注意的是**：使用`Scroller`并不是只能用于`scrollX`、`scrollY`，我们只是把值传入，然后`Scroller`帮我们计算当前值，所以也可以传入`left`等坐标，用来计算自身位置，而不是仅用于移动内容。
 **还可以修改默认插值器**
 
@@ -106,8 +107,9 @@ public boolean computeScrollOffset() {
 | `getCurrVelocity()` | 返回当前速度（fling模式） |
 
 ## 5.fling
-&emsp;&emsp;`Scroller`还可以使用`fling`方法来完成惯性滑动，即滑动抬手（带有滑动速度）后不断减速的情况。一般需要结合`VelocityTracker`获取速度来使用，还可以配合`GestureDectector`检测fling手势。
-&emsp;&emsp;先看`fling`方法和`computeScrollOffset`方法源码。
+`Scroller`还可以使用`fling`方法来完成惯性滑动，即滑动抬手（带有滑动速度）后不断减速的情况。一般需要结合`VelocityTracker`获取速度来使用，还可以配合`GestureDectector`检测fling手势。
+
+先看`fling`方法和`computeScrollOffset`方法源码。
 ```
 /**
  * 滑动的距离依赖于初始速度，越快越远
@@ -177,8 +179,9 @@ public void fling(int startX, int startY, int velocityX, int velocityY,
     mFinalY = Math.max(mFinalY, mMinY);
 }
 ```
-&emsp;&emsp;可以看出，`fling`方法主要是赋值当前速度、起始位置、最大最小X和Y的值，和算出来的结束值。跟`startScroll`方法一样，引发滑动还是要靠`invalidate()`方法和`computeScrollOffset()`方法配合。
-&emsp;&emsp;下面看`computeScrollOffset()`中模式为`fling`时：
+可以看出，`fling`方法主要是赋值当前速度、起始位置、最大最小X和Y的值，和算出来的结束值。跟`startScroll`方法一样，引发滑动还是要靠`invalidate()`方法和`computeScrollOffset()`方法配合。
+
+下面看`computeScrollOffset()`中模式为`fling`时：
 ```
 public boolean computeScrollOffset() {
     if (mFinished) {
@@ -192,7 +195,7 @@ public boolean computeScrollOffset() {
         case SCROLL_MODE:
             ......
         case FLING_MODE:
-            final float t = (float) timePassed / mDuration;//已经过时间占总时间的比值
+            final float t = (float) timePassed / mDuration;//经过时间占总时间的比值
             final int index = (int) (NB_SAMPLES * t);//比值乘100，并转为整数，也就是0到100的整数
             float distanceCoef = 1.f;
             float velocityCoef = 0.f;
