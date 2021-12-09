@@ -299,7 +299,7 @@ fun foo(returning: () -> Unit) {
 ```
 此时会编译报错，因为带return的lambda如果用在内联函数中，发生内联后，那么应该返回的是内联函数的外部函数；而如果用在普通函数中，那么推论起来返回的应该是lambda生成的匿名类中的函数，或者说返回的是lambda自己，而不是当前inline函数的外层函数。这就产生了明确性的问题，我们每次使用高阶函数，都要先确定该函数是不是inline函数，才能确定我们传入的lambda中的return返回的是哪里，产生很大的困扰。所以Kotlin为了避免lambda中的return返回哪里不明确的问题，在Lambda中就强制不能使用return，除非lambda表达式是内联函数的参数。
 
-那么可以明确的就是，只有在inline函数的lambda参数中，才可以使用return，而且返回的就是当前inline函数的外层函数（**例外的是lambda表达式中可以用 return@label 的方式明确返回当前inline函数，还是更外层的函数**）。
+那么可以明确的就是，只有在inline函数的lambda参数中，才可以使用return，而且返回的就是当前调用inline函数的函数（**例外的是lambda表达式中可以用 return@label 的方式明确返回当前inline函数，还是更外层的函数**）。
 
 所以下面将foo函数声明为inline即可正常使用。
 ```
@@ -308,15 +308,69 @@ fun main() {
 }
 
 inline fun foo(returning: () -> Unit) {
-    println("before local return")
+    println("before lambda return")
     returning()
-    println("after local return")
+    println("after lambda return")
     return
 }
 //运行结果
 before local return
 ```
 结果与局部返回不同，Lambda中的return让foo函数也退出了。这就是因为内联函数的原因，直接将Lambda中的return放到了foo函数中。
+
+了解一下内联函数中的return，在不同情况下返回的是哪里：
+```
+fun main() {
+    println("main 111")
+    jjj()
+    println("main 222")
+}
+
+fun hhh() {
+    println("hhh 111")
+    foo {
+        println("foo lambda")
+        return
+    }
+    println("hhh 222")
+}
+
+inline fun foo(returning: () -> Unit) {
+    println("foo 111")
+    returning()
+    println("foo 222")
+}
+
+fun jjj() {
+    println("jjj 111")
+    hhh()
+    println("jjj 222")
+}
+
+//打印如下
+main 111
+jjj 111
+hhh 111
+foo 111
+foo lambda
+jjj 222
+main 222
+```
+可以看出来，内联函数的lambda参数传值中的return，结束了hhh函数的调用，表明内联函数的lambda参数中的return结束的是调用这个内联函数的函数。而如果使用`return@hhh`，效果和默认的return一致。
+
+如果使用`return@foo`，打印如下：
+```
+main 111
+jjj 111
+hhh 111
+foo 111
+foo lambda 111
+foo 222
+hhh 222
+jjj 222
+main 222
+```
+表明这种情况，结束的就`只是当前的lambda`。
 
 ### crossinline
 现在我们看一个例子：
