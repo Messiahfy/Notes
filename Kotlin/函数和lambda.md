@@ -356,7 +356,7 @@ foo lambda
 jjj 222
 main 222
 ```
-可以看出来，内联函数的lambda参数传值中的return，结束了hhh函数的调用，表明内联函数的lambda参数中的return结束的是调用这个内联函数的函数。而如果使用`return@hhh`，效果和默认的return一致。
+可以看出来，内联函数的lambda参数传值中的return，结束了hhh函数的调用，表明内联函数的lambda参数中的return结束的是调用这个内联函数的函数（因为foo函数的内容都内联到hhh函数了）。如果使用`return@hhh`，效果和默认的return一致。
 
 如果使用`return@foo`，打印如下：
 ```
@@ -370,7 +370,7 @@ hhh 222
 jjj 222
 main 222
 ```
-表明这种情况，结束的就`只是当前的lambda`。
+表明这种情况，结束的就`只是当前的lambda`。相当于就是编译器的语法糖。
 
 ### crossinline
 现在我们看一个例子：
