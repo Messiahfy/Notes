@@ -208,3 +208,9 @@ framework和支持库中的每个widget都有一个默认样式。 例如，当�
 您还可以扩展widget样式，就像扩展任何其他样式一样，然后将自定义widget样式应用于布局或主题中。
 
 要发现支持库中可用的所有替代小部件样式，请查看以Widget开头的字段的[R.style](https://developer.android.google.cn/reference/android/support/v7/appcompat/R.style.html)参考。 （忽略以Base_Widget开头的样式。）请记住在资源中使用样式名称时用句点替换所有下划线。
+
+## 默认主题
+当我们创建一个新项目的时候，AndroidManifest文件中的application内，已经帮我们写上了theme，因为一般会使用appcompat库，所以帮我们写的theme会间接继承自appcompat库中的`Platform.AppCompat.Light`主题，而这个主题又会继承Android SDK也就是Framework中的主题。
+
+* 如果我们不设置主题，会发生什么呢？如果是appcompat的ContextThemeWrapper，getTheme方法中会使用`Theme_AppCompat_Light`主题；如果是Framework的ContextThemeWrapper，则会使用`Resources.selectDefaultTheme`选根据版本选择一个默认主题（比如`Theme_DeviceDefault`）。
+* 如果设置了一个随意的主题，比如里面什么也不写，会不会造成缺失默认属性配置呢？ContextThemeWrapper的initializeTheme()中会使用getBaseContext().getTheme()，得到系统默认主题来作为初始值（比如`Theme_DeviceDefault_Light_DarkActionBar`），再用自己设定的主题和默认的合并，所以即使自己设置的主题中什么也不写，也是有默认属性的。
