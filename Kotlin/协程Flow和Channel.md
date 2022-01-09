@@ -31,7 +31,7 @@ onBufferOverflow：当缓存已满时Channel的行为
 * DROP_OLDEST：当buffer满了，可以send，但会丢弃buffer中最旧的元素
 * DROP_LATEST：当buffer满了，可以send，但会丢弃buffer中最新的元素
 
-onUndeliveredElement就是使用DROP_OLDEST或DROP_LATEST，丢弃元素时的回调
+onUndeliveredElement就是使用DROP_OLDEST或DROP_LATEST，或者因为异常（比如取消）等原因，导致发送的元素未能接收时的回调
 
 ### send和receive
 send和receive都是挂起函数，并且支持取消。如果Channel关闭，send和receive会抛出异常。
