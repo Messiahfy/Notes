@@ -185,6 +185,7 @@ public fun <T> MutableSharedFlow(
 * extraBufferCapacity：replay之外的缓存容量，和replay之和就是总缓存容量
 * onBufferOverflow：发射的数据超过缓存容量时的策略，可以选择挂起、丢弃最新的、丢弃最旧的
 
+> 如果replay为0，无论extraBufferCapacity多大，只要没有订阅者，SharedFlow的发射的数据都会被丢弃
 
 StateFlow是SharedFlow的子类，使用方式类似，但仅包含一个值，表示当前的状态。在StateFlow中，通过Any#equals方法来判断前后两个数据是否相等，相等则会忽略。（所以StateFlow相当于是SharedFlow的一种特例，replay为1，extraBufferCapacity为0，并使用distinctUntilChanged()）
 
