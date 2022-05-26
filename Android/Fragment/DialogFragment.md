@@ -5,3 +5,5 @@ DialogFragment是一个持有dialog的无界面Fragment
 onCreateDialog()有默认实现，可以自行决定是否重写
 
 DialogFragment也可以当普通fragment来用，这时就不要调用它的show方法，而是像普通fragment一样使用就行
+
+* DialogFragment内给Dialog设置布局使用setContentView(view)，会导致view的layoutParams无效，寻找方式避免默认的layoutParams，例如onViewCreated里面代码修改宽高
