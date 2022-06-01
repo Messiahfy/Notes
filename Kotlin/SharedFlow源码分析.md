@@ -37,7 +37,7 @@ private class SharedFlowSlot : AbstractSharedFlowSlot<SharedFlowImpl<*>>() {
 }
 ```
 
-简单看完`SharedFlowSlot`的代码，
+简单看完`SharedFlowSlot`的代码，继续看`AbstractSharedFlow`：
 ```
 internal abstract class AbstractSharedFlow<S : AbstractSharedFlowSlot<*>> : SynchronizedObject() {
     // 存放Slot的数组，其中的Slot不一定都有关联订阅者，比如已经被释放关联的情况
