@@ -56,7 +56,15 @@
 `ViewGroup` 的 `invalidateChild()`方法如下
 ```
     public final void invalidateChild(View child, final Rect dirty) {
-       ......
+        final AttachInfo attachInfo = mAttachInfo;
+        if (attachInfo != null && attachInfo.mHardwareAccelerated) {
+            // 开启了硬件加速（后面未具体分析）
+            onDescendantInvalidated(child, child);
+            return;
+        }
+
+        // 未开启硬件加速
+
         //声明ViewParent 为自身
         ViewParent parent = this;
         if (attachInfo != null) {

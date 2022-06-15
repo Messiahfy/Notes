@@ -1,6 +1,5 @@
-参考[缓存](https://www.jianshu.com/p/2b19e9bcda84)
-[可视化 RecyclerView 缓存机制](https://juejin.im/post/5a5d3d9b518825734216e1e8)
-[基于滑动场景解析RecyclerView的回收复用机制](https://www.jianshu.com/p/9306b365da57)
+文章记录：https://juejin.cn/post/6984974879296585764
+
 RecyclerView的视图缓存分为四层，分别是mAttachedScrap、mCachedViews、mViewCacheExtension（一般不用）、mRecyclerPool
 
 1.**mAttachedScrap**：屏幕内 item 快速复用（RecyclerView具有两次 onLayout() 过程，第二次 onLayout() 中直接使用第一次 onLayout() 缓存的 View，而不必再创建）。
@@ -52,13 +51,15 @@ public final class Recycler {
     static final int DEFAULT_CACHE_SIZE = 2;
     ...
     类的结构也比较清楚，这里可以清楚的看到我们后面讲到的四级缓存机制所用到的类都在这里可以看到：
-    * 1.一级缓存：mAttachedScrap
+    * 1.一级缓存：mAttachedScrap，mChangedScrap
     * 2.二级缓存：mCacheViews
     * 3.三级缓存：mViewCacheExtension
     * 4.四级缓存：mRecyclerPool
 }
 ```
 Recycler是用于管理废弃的item或者从RecyclerView中移除的View便于复用，废弃的View是指仍然依附在RecyclerView中，但是已经被标记为移除的或者可以复用的。
+
+
 
 ## 源码分析
 在布局绘制流程的分析中，`layoutChunk`方法中的`View view = layoutState.next(recycler)`用于获取`view`，如果有缓存有从缓存中获取，否则会重新创建一个。内部最终会调用到`Recycler`的`tryGetViewHolderForPositionByDeadline`方法
@@ -78,12 +79,16 @@ ViewHolder tryGetViewHolderForPositionByDeadline(int position,
     }
     boolean fromScrapOrHiddenOrCache = false;
     ViewHolder holder = null;
-    // 0) 首先从Attached中的Changed数组中取（有动画的情况下进入此if）
+
+    // 0. 首先从Attached中的Changed数组中取（有动画的情况下进入此if）
+
     if (mState.isPreLayout()) {
         holder = getChangedScrapViewForPosition(position);
         fromScrapOrHiddenOrCache = holder != null;
     }
-    // 1) 分别从AttachedScrap,Hidden，Cached中获取ViewHolder
+
+    // 1. 分别从AttachedScrap,Hidden，Cached中获取ViewHolder
+
     if (holder == null) {
         holder = getScrapOrHiddenOrCachedHolderForPosition(position, dryRun);
         if (holder != null) {
@@ -114,7 +119,9 @@ ViewHolder tryGetViewHolderForPositionByDeadline(int position,
         }
 
         final int type = mAdapter.getItemViewType(offsetPosition);
-        // 2) Find from scrap/cache via stable ids, if exists
+
+        // 2. Find from scrap/cache via stable ids, if exists
+        
         if (mAdapter.hasStableIds()) {
             holder = getScrapOrCachedViewForId(mAdapter.getItemId(offsetPosition),
                     type, dryRun);
@@ -124,7 +131,9 @@ ViewHolder tryGetViewHolderForPositionByDeadline(int position,
                 fromScrapOrHiddenOrCache = true;
             }
         }
-        //自定义缓存，通过mViewCacheExtension进行获取
+
+        // 3. 自定义缓存，通过mViewCacheExtension进行获取
+
         if (holder == null && mViewCacheExtension != null) {
             // We are NOT sending the offsetPosition because LayoutManager does not
             // know it.
@@ -143,7 +152,9 @@ ViewHolder tryGetViewHolderForPositionByDeadline(int position,
                 }
             }
         }
-        //通过mRecyclerPool获取
+
+        // 4. 通过mRecyclerPool获取
+
         if (holder == null) { // fallback to pool
             holder = getRecycledViewPool().getRecycledView(type);
             if (holder != null) {
@@ -153,7 +164,9 @@ ViewHolder tryGetViewHolderForPositionByDeadline(int position,
                 }
             }
         }
-        //创建
+
+        // 创建
+
         if (holder == null) {
             long start = getNanoTime();
             if (deadlineNs != FOREVER_NS
@@ -216,7 +229,9 @@ ViewHolder tryGetViewHolderForPositionByDeadline(int position,
     return holder;
 }
 ```
+
 对方法中的内容具体分析：
+
 ```
 if (mState.isPreLayout()) {//preLayout默认是false，只有有动画的时候才为true
     holder = getChangedScrapViewForPosition(position);
@@ -424,5 +439,3 @@ if (holder == null && mViewCacheExtension != null) {
 
 &#160; &#160; &#160; &#160;`recyclerView()`之前还会调用`LayoutManager#removeViewAt`方法，-->ChildHelper#removeViewAt-->callback#removeViewAt（在RecyclerView中传入了callback实现类）-->RecyclerView.this.removeViewAt(index)-->ViewGroup#removeViewAt-->ViewGroup#removeViewInternal-->view.dispatchDetachedFromWindow()-->onDetachedFromWindow()
 &#160; &#160; &#160; &#160;所以回收ViewHolder，也是会将View从RecyclerView这个ViewGroup中remove掉，跟平常的ViewGroup一样，同时也会是View调用`onDetachedFromWindow()`方法。**所以视图对象虽然会被回收复用，但它还是会先从容器中remove，也会调用onDetachedFromWindow方法。**
-
-回收对焦点的影响问题？？？

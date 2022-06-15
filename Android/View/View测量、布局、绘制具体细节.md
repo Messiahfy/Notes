@@ -12,13 +12,15 @@
 
 ## 2.Measure测量
 ### 2.1 MeasureSpec
-MeasureSpec是一个int数值，通过`MeasureSpec.getMode(int measureSpec)`和`MeasureSpec.getSize(int measureSpec)`可以获得其模式和尺寸。<br/>
+MeasureSpec是一个32位的int数值，由高2位的SpecMode和低30位的SpecSize两部分组成，通过`MeasureSpec.getMode(int measureSpec)`和`MeasureSpec.getSize(int measureSpec)`可以获得其模式和尺寸。<br/>
 模式有三种：
 * `MeasureSpec.EXACTLY` 表示父控件希望子控件使用确定的尺寸
 * `MeasureSpec.UNSPECIFIED` 表示父控件没有限制子控件的尺寸
 * `MeasureSpec.AT_MOST` 表示父控件希望子控件自行确定尺寸，但不能超过父控件
 
-`MeasureSpec.getSize(int measureSpec)`在`MeasureSpec.EXACTLY`模式下一般即确定的尺寸，在`MeasureSpec.AT_MOST`模式下一般即父控件尺寸。（使用“一般”这个词是因为自定义View时可以故意任意设定，但当然建议符合默认逻辑）
+SpecMode和`MATCH_PARENT`、`WRAP_CONTENT`的对应关系可以参考ViewGroup的`getChildMeasureSpec`方法
+
+> 对于`MeasureSpec.UNSPECIFIED`，可以参考ScrollView，因为ScrollView的子view可以无限高，所以测量高度的时候，使用`MeasureSpec.UNSPECIFIED`，不限制高度，由子view自己决定。
 
 ### 2.2 MeasureSpec的设定
 最初的`widthMeasureSpec`和`heightMeasureSpec`是在ViewRootImpl中的performTraversals()-->measureHierarchy-->getRootMeasureSpec中生成
@@ -27,12 +29,16 @@ MeasureSpec是一个int数值，通过`MeasureSpec.getMode(int measureSpec)`和`
 
 &emsp;&emsp;**自定义ViewGroup**时，需要先测量`子view`。在`onMeasure`中要先调用`measureChildren`或`measureChild`或`measureChildWithMargins`测量子`view`，引发调用子`view`的`measure`、`onMeasure`。测量了`子view`后，得到所有`子view`的测量尺寸，再结合自身布局特定和`子view`的测量尺寸来调用`setMeasuredDimension`，确定自身测量的宽高。<br/>
 
+> 在调用`setMeasuredDimension`时，传入的宽高一般是使用`resolveSize`或`resolveSizeAndState`得到的。两者都会传入view自身想要的尺寸和父级传来的MeasureSpec，自身想要的尺寸会结合minWidth、minHeight、maxWidth、maxHeight、padding和自身内容等数据。测量的尺寸是一个32位int值，它的高8位表示测量状态，低24位表示实际的尺寸大小，两个方法有区别的是，`resolveSize`返回的int值高8位均为0，也就是只包含尺寸大小，`resolveSizeAndState`则包含了测量的状态。
+
 **注意**：在测量、布局、绘制前，所有View的LayoutParams都是已经构造好的。
 
 > 参考`ViewGroup`的`measureChildWithMargins`方法及`getChildMeasureSpec`方法，可以看出`parent`传给`child`的`onMeasure()`的`MeasureSpec`的规则
 
 &emsp;&emsp;每个`ViewGroup`都有`LayoutParams`内部类，`xml`布局文件解析时会根据子`view`设置的`layout_width`等属性为子`view`设置`LayoutParams`（也可以代码设定），`ViewGroup`根据子`Veiw`的`LayoutParams`决定传给子`View`的`Measure`和`onMeasure`的`widthMeasureSpec`和`heightMeasureSpec`。<br/>
 &emsp;&emsp;`onMeasure`中的两个参数都是由父视图传来，是由父视图根据子视图的`layoutParams`中的`lp.width`、`lp.marginLeft`等信息生成（可参照`FrameLayout`的`onMeasure`方法，其中调用父类`ViewGroup`的`measureChildWithMargins`，`measureChildWithMargins`中调用`getChildMeasureSpec`，此中设置了`MeasureSpec`的`mode`和`size`，并传给子视图）
+
+**注意**：测量过程可能会有多次，例如parent为wrap_content，child为match_parent，这种情况LinearLayout就会先测量其他所有非match_parent的child，得到其中child的最大尺寸后，再用这个尺寸作为自身尺寸来测量match_parent的child。
 
 ## 3.Layout 布局
 每个View都是先被父控件调用了`layout(int l, int t, int r, int b)`方法，其中会先调用`setFrame(int l, int t, int r, int b)`更新mLeft、mTop、mRight、mBottom，并调用`invalidate`。`setFrame`之后调用`onLayout(boolean changed, int l, int t, int r, int b)`，View不用重写，ViewGroup需要重写来确定child的位置。
@@ -53,6 +59,9 @@ draw(canvas)方法会先drawBackground(canvas)，然后调用onDraw(canvas)绘�
 requestLayout()：调用onMeasure()和onLayout()。会调用rootViewImpl的requestLayout。（如果当前View在请求布局的时候，View树正在进行布局流程的话，该请求会延迟到布局流程完成后或者绘制流程完成且下一次布局发现的时候再执行）
 
 invalidate()：只调用本view的onDraw()。当子View调用了invalidate()方法后，会为该View添加一个标记位，同时不断向父容器请求刷新，父容器通过计算得出自身需要重绘的区域，直到传递到ViewRootImpl中，最终触发performTraversals方法，进行开始View树重绘流程(只绘制需要重绘的视图)。
+
+* 关闭硬件加速则从 DecorView 开始往下的所有子 View 都会被重新绘制。
+* 开启硬件加速则只有调用 invalidate 方法的 View 才会重新绘制。
 
 自定义view
 https://ke.qq.com/course/313640?taid=2323607372220712

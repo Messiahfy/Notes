@@ -5,11 +5,11 @@
 * ChildHelper 管理子View
 * ViewInfoStore 存储子VIEW的动画信息
 * Adapter 数据适配器
-* LayoutManager 负责子VIEW的布局，核心部件
+* LayoutManager 负责子View的布局，核心部件
 * ItemAnimator Item动画
 * ViewFlinger 快速滑动管理
-* NestedScrollingChildHelper 管理子VIEW嵌套滑动
-#### 构造函数
+* NestedScrollingChildHelper 管理子View嵌套滑动
+## 构造函数
 ```
 public RecyclerView(Context context, @Nullable AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
@@ -79,7 +79,7 @@ public RecyclerView(Context context, @Nullable AttributeSet attrs, int defStyle)
         setNestedScrollingEnabled(nestedScrollingEnabled);
     }
 ```
-#### setLayoutManager
+## setLayoutManager
 如果之前已设LayoutManager，就先移除所有view并回收，然后清空`Recycler`；如果之前没有就只是清空`Recycler`。`mLayout`引用新的`LayoutManager`，并调用`requestLayout()`
 ```
     public void setLayoutManager(LayoutManager layout) {
@@ -124,7 +124,7 @@ public RecyclerView(Context context, @Nullable AttributeSet attrs, int defStyle)
         requestLayout();
     }
 ```
-#### setAdapter
+## setAdapter
 ```
     public void setAdapter(Adapter adapter) {
         // bail out if layout is frozen
@@ -136,16 +136,23 @@ public RecyclerView(Context context, @Nullable AttributeSet attrs, int defStyle)
 ```
 --------------------------------------------------
 > 设置`LayoutManager`和`Adapter`会引发绘制流程，修改数据并`notify`也会引发绘制流程
-#### onMeasure
+## onMeasure
+RecyclerView中有一个mState，它的mLayoutStep字段用于标识当前需要执行哪一步布局：
+* `STEP_START`：需要执行dispatchLayoutStep1()，执行后状态为STEP_LAYOUT
+* `STEP_LAYOUT`：需要执行dispatchLayoutStep2()，执行后状态为STEP_ANIMATIONS
+* `STEP_ANIMATIONS`：需要执行dispatchLayoutStep3()，执行后状态又变为STEP_START
 ```
     @Override
     protected void onMeasure(int widthSpec, int heightSpec) {
+        // 第一种情况，没有设置LayoutManager
         if (mLayout == null) {
             //如果没有设置layoutManager，调用default方法，设置宽高
             defaultOnMeasure(widthSpec, heightSpec);
             return;
         }
-        if (mLayout.isAutoMeasureEnabled()) {//LinearLayoutManager返回true
+
+        // 第二种情况，LayoutManager开启自动测量，一般都是这种
+        if (mLayout.isAutoMeasureEnabled()) { //LinearLayoutManager返回true
             final int widthMode = MeasureSpec.getMode(widthSpec);
             final int heightMode = MeasureSpec.getMode(heightSpec);
             //内部也是调用defaultOnMeasure设置自身默认宽高
@@ -185,7 +192,8 @@ public RecyclerView(Context context, @Nullable AttributeSet attrs, int defStyle)
     }
 ```
 > 如果`RecyclerVeiw`的宽高不确定，就在`onMeasure`中执行`dispatchLayoutStep1()`和`dispatchLayoutStep2()`，`onMeasure`中执行`1`和`2`的话，`onLayout`中就不再执行<br>
-否则，如果确定，`onMeasure`中不执行`1`和`2`，,而在`onLayout`中执行。
+否则，如果确定，`onMeasure`中不执行`1`和`2`，而在`onLayout`中执行。
+
 ## onLayout
 ```
 @Override
@@ -262,7 +270,7 @@ void dispatchLayout() {
     }
 ```
 
-#### dispatchLayoutStep2
+## dispatchLayoutStep2
 执行实际布局
 ```
     private void dispatchLayoutStep2() {
@@ -275,7 +283,7 @@ void dispatchLayout() {
         ......
     }
 ```
-#### dispatchLayoutStep3
+## dispatchLayoutStep3
 设置状态，触发动画，清理无用信息
 ```
 private void dispatchLayoutStep3() {
@@ -291,7 +299,8 @@ private void dispatchLayoutStep3() {
 ```
 ---------------------------------------------
 从上面的几个步骤可以看出，很多是和动画、保存信息等相关的操作，这里先不管动画之类的内容，先聚焦于`LayoutManager`的`onLayoutChildren`方法，此方法是实际完成布局的方法。
-#### 以LinearManager的onLayoutChildren方法为例
+
+## 以LinearManager的onLayoutChildren方法为例
 ```
     @Override
     public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
@@ -338,24 +347,52 @@ private void dispatchLayoutStep3() {
         mLayoutState.mInfinite = resolveIsInfinite();
         mLayoutState.mIsPreLayout = state.isPreLayout();
         if (mAnchorInfo.mLayoutFromEnd) {
-            ......//一般进入下面分支
-        } else {
-            //正常绘制，先往下填充绘制，再往上填充绘制
-            // fill towards end
-            updateLayoutStateToFillEnd(mAnchorInfo);
-            ......
-            fill(recycler, mLayoutState, state, false);
-            ......
             // fill towards start
             updateLayoutStateToFillStart(mAnchorInfo);
-            ......
+            mLayoutState.mExtraFillSpace = extraForStart;
             fill(recycler, mLayoutState, state, false);
-            ......
+            startOffset = mLayoutState.mOffset;
+            final int firstElement = mLayoutState.mCurrentPosition;
+            if (mLayoutState.mAvailable > 0) {
+                extraForEnd += mLayoutState.mAvailable;
+            }
+            // fill towards end
+            updateLayoutStateToFillEnd(mAnchorInfo);
+            mLayoutState.mExtraFillSpace = extraForEnd;
+            mLayoutState.mCurrentPosition += mLayoutState.mItemDirection;
+            fill(recycler, mLayoutState, state, false);
+            endOffset = mLayoutState.mOffset;
+
+            if (mLayoutState.mAvailable > 0) {
+                // end could not consume all. add more items towards start
+                extraForStart = mLayoutState.mAvailable;
+                updateLayoutStateToFillStart(firstElement, startOffset);
+                mLayoutState.mExtraFillSpace = extraForStart;
+                fill(recycler, mLayoutState, state, false);
+                startOffset = mLayoutState.mOffset;
+            }
+        } else {
+            // fill towards end
+            updateLayoutStateToFillEnd(mAnchorInfo);
+            mLayoutState.mExtraFillSpace = extraForEnd;
+            fill(recycler, mLayoutState, state, false);
+            endOffset = mLayoutState.mOffset;
+            final int lastElement = mLayoutState.mCurrentPosition;
+            if (mLayoutState.mAvailable > 0) {
+                extraForStart += mLayoutState.mAvailable;
+            }
+            // fill towards start
+            updateLayoutStateToFillStart(mAnchorInfo);
+            mLayoutState.mExtraFillSpace = extraForStart;
+            mLayoutState.mCurrentPosition += mLayoutState.mItemDirection;
+            fill(recycler, mLayoutState, state, false);
+            startOffset = mLayoutState.mOffset;
+
             if (mLayoutState.mAvailable > 0) {
                 extraForEnd = mLayoutState.mAvailable;
                 // start could not consume all it should. add more items towards end
                 updateLayoutStateToFillEnd(lastElement, endOffset);
-                mLayoutState.mExtra = extraForEnd;
+                mLayoutState.mExtraFillSpace = extraForEnd;
                 fill(recycler, mLayoutState, state, false);
                 endOffset = mLayoutState.mOffset;
             }
@@ -374,8 +411,8 @@ private void dispatchLayoutStep3() {
         }
     }
 ```
-找到锚点，然后使用fill方法
-#### fill方法
+找到锚点，然后使用fill方法，对两个方向添加view
+## fill方法
 ```
     int fill(RecyclerView.Recycler recycler, LayoutState layoutState,
             RecyclerView.State state, boolean stopOnFocusable) {
@@ -390,7 +427,7 @@ private void dispatchLayoutStep3() {
 ```
 关键是`layoutChunk`方法
 
-#### layoutChunk方法
+## layoutChunk方法
 ```
 void layoutChunk(RecyclerView.Recycler recycler, RecyclerView.State state,
             LayoutState layoutState, LayoutChunkResult result) {
@@ -421,5 +458,6 @@ void layoutChunk(RecyclerView.Recycler recycler, RecyclerView.State state,
 > `layoutState.next(recycler)`相关具体内容在下一节**回收复用**中分析
 
 ------------------------------------------------------ 
-## 以上完成了布局，下面描述绘制
+
+## 绘制
 关于绘制，`RecyclerView`的`draw`方法会完成`ItemDecoration`的绘制，而且会调用`super.draw(c)`-->`ViewGroup.dispatchDraw(canvas)`-->循环调用`drawChild`-->子`view`的绘制

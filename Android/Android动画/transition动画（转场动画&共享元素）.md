@@ -195,8 +195,9 @@ public class CustomTransition extends Transition {
 ```
 下面解释如何重写这些方法。
 #### 5.2 捕获view的属性值
-&#160; &#160; &#160; &#160;`transition`动画使用了属性动画，属性动画在指定的时间段内更改起始值和结束值之间的视图属性，因此`transition`框架需要同时具有属性的起始值和结束值以构造动画。
+&#160; &#160; &#160; &#160;`transition`动画使用了属性动画，属性动画在指定的时间段内更改起始值和结束值之间的视图属性，因此`transition`框架需要同时具有属性的起始值和结束值以构造动画。    
 &#160; &#160; &#160; &#160;但是，属性动画通常只需要所有视图属性值的一小部分。 例如，颜色动画需要颜色属性值，而移动动画需要位置属性值。 由于对于`transition`来说动画所需的属性值是特定的，因此`transition`框架不会为`transition`提供每个属性值。 相反，框架调用回调函数，允许`transition`仅捕获它需要的属性值并将它们存储在框架中。
+
 -------------------------------------------
 1. **捕获起始值**
 &#160; &#160; &#160; &#160;要将view的起始属性值传递给框架，请实现`captureStartValues(transitionValues)`方法。`transition`框架（`transition`的`captureValues`方法）会为起始`scene`中的每个`view`都调用`captureStartValues(transitionValues)`方法。参数是一个`TransitionValues`对象，它包含对`view`的引用，以及一个`Map`实例，您可以在其中存储所需的`view`属性值，存储的这些属性值均会被`transition`框架获取（实际就是保存在`transition`这个抽象父类的实例域中，当然也就是自定义的这个子类的实例域）。
@@ -240,8 +241,8 @@ public void captureEndValues(TransitionValues transitionValues) {
 -------------------------------------
 在上面示例中，`captureStartValues()`和`captureEndValues()`函数都调用`captureValues()`来检索和存储值。 `captureValues()`检索的`view`属性是相同的，但它**在起始和结束场景中具有不同的值**。 该框架为`view`的起始和结束状态维护两个单独的键值对。
 #### 5.3 创建animator
-&#160; &#160; &#160; &#160;在捕获了起始值和结束值后，还要重写`createAnimator()`方法来提供`animator`。框架调用此方法时，会传递`scene`的`根视图`和包含您捕获的`起始值`和`结束值`的`TransitionValues`对象。
-&#160; &#160; &#160; &#160;框架调用`createAnimator()`方法的次数取决于开始和结束`scene`之间发生的更改。例如**淡出/淡入动画**。如果**起始场景**有**五个目标**，其中**两个**从**结束场景**中移除，并且**结束场景**具有来自**起始场景**的三个目标加上一个新目标，则框架调用`createAnimator()`**六次**：三次调用对停留在两个场景对象中的目标执行淡出和淡入动画（两个场景都存在则起始值和初始值相同，看不出淡入/淡出效果，但是还是会调用`createAnimator()`方法）；另外两个调用对从结束场景中删除的目标的执行淡出;另一个一个调用对结束场景中新目标执行淡入。
+&#160; &#160; &#160; &#160;在捕获了起始值和结束值后，还要重写`createAnimator()`方法来提供`animator`。框架调用此方法时，会传递`scene`的`根视图`和包含您捕获的`起始值`和`结束值`的`TransitionValues`对象。    
+&#160; &#160; &#160; &#160;框架调用`createAnimator()`方法的次数取决于开始和结束`scene`之间发生的更改。例如**淡出/淡入动画**。如果**起始场景**有**五个目标**，其中**两个**从**结束场景**中移除，并且**结束场景**具有来自**起始场景**的三个目标加上一个新目标，则框架调用`createAnimator()`**六次**：三次调用对停留在两个场景对象中的目标执行淡出和淡入动画（两个场景都存在则起始值和初始值相同，看不出淡入/淡出效果，但是还是会调用`createAnimator()`方法）；另外两个调用对从结束场景中删除的目标的执行淡出;另一个一个调用对结束场景中新目标执行淡入。    
 &#160; &#160; &#160; &#160;对于存在于开始和结束场景的目标视图，框架分别对**起始值**和**结束值**都提供了`TransitionValues`对象。对于仅存在于开始或结束场景中的目标视图，框架为相应的参数提供`TransitionValues`对象，为另一个提供`null`。
 [官方参考示例](https://github.com/googlesamples/android-CustomTransition/blob/master/Application/src/main/java/com/example/android/customtransition/ChangeColor.java)
 

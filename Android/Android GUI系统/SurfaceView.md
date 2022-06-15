@@ -1,11 +1,8 @@
 View和SurfaceView的区别:
 
-1 . View适用于主动更新的情况，而SurfaceView则适用于被动更新的情况，比如频繁刷新界面。
-
-2 . View在主线程中对页面进行刷新，而SurfaceView则开启一个子线程来对页面进行刷新。
-
-3 . View在绘图时没有实现双缓冲机制，SurfaceView在底层机制中就实现了双缓冲机制。
-
+1. View适用于主动更新的情况，而SurfaceView则适用于被动更新的情况，比如频繁刷新界面。
+2. View在主线程中对页面进行刷新，而SurfaceView则开启一个子线程来对页面进行刷新。
+3. View在绘图时没有实现双缓冲机制，SurfaceView在底层机制中就实现了双缓冲机制。
 
 模板代码：
 ```
