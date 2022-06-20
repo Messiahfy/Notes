@@ -1,10 +1,10 @@
 ## Parcel
 进程间通信传输的数据，本质上是复制一份一样的数据，Android中使用Parcel来包装需要传输的数据。对于基本类型，可以直接设置一样的值传输；对于引用类型，则需要实现Parcelable接口的相关方法，并且引用类型中的属性如果是引用类型，如果需要跨进程传输，则也需要实现Parcelable接口。
-
+```
 Parcel p = Parcel.obtain();
 p.writeInt(1);
 p.writeInt(2);
-
+```
 //读取前必须设置位置，否则写了两个int即8个字节，那么当前位置是9，则会从第9位置开始读，所以要先设为0
 p.setDataPosition(0);
 

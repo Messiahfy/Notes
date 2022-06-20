@@ -536,14 +536,7 @@ status_t IPCThreadState::talkWithDriver(bool doReceive) //默认参数为true
 * bwr.write_consumed > 0 说明Binder驱动消耗了mOut中的数据，所以要把这部分已处理过的数据移除掉。如果消耗的量小于总量，就只删去这部分数据；否则设置总量为0
 * bwr.read_consumed > 0 说明Binder驱动回复了数据，写到了mIn.data()指向的地址，则设置dataSize和dataPos为适当值。
 
-
-
-
-
-
-
-
-
+```
 status_t IPCThreadState::writeTransactionData(int32_t cmd, uint32_t binderFlags,
     int32_t handle, uint32_t code, const Parcel& data, status_t* statusBuffer)
 {

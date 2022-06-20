@@ -47,7 +47,7 @@ Observable.create(new ObservableOnSubscribe<String>() {
             }
         });
 ```
-#### 第一步：create
+### 第一步：create
 ```
 public static <T> Observable<T> create(ObservableOnSubscribe<T> source) {
     ObjectHelper.requireNonNull(source, "source is null");//判空
@@ -80,7 +80,7 @@ public final class ObservableCreate<T> extends Observable<T> {
 ```
 `ObservableCreate` 包装了 `ObservableOnSubscribe`，在订阅流程中，会调到 `subscribeActual` 方法，此时会把 `CreateEmitter`传给 `ObservableOnSubscribe`的 `subscribe` 方法，也就是我们在 `Observable.create`中的匿名内部类 `subscribe` 方法。在匿名 `ObservableOnSubscribe` 内部类的 `subscribe` 方法中我们调用了 `onNext` 等方法，接着就会传给下游的观察者。
 
-#### 第二步：map
+### 第二步：map
 ```
 public final <R> Observable<R> map(Function<? super T, ? extends R> mapper) {
     ObjectHelper.requireNonNull(mapper, "mapper is null");
@@ -139,7 +139,7 @@ public final class ObservableMap<T, U> extends AbstractObservableWithUpstream<T,
 订阅流程中 `subscribeActual` 就把包装了 `Function` 的 `Observer` 传给第一步的 `Observable`。发布流程中，第一步的 `Observable` 发布数据就会经过这个
  `Observer` ，其中就会在 `onNext` 的时候执行 `Function` 的 `apply`函数，然后再将转换后的结果往后发布。
 
-#### 第三步：subscribeOn
+### 第三步：subscribeOn
 ```
 public final Observable<T> subscribeOn(Scheduler scheduler) {
     ObjectHelper.requireNonNull(scheduler, "scheduler is null");
@@ -183,7 +183,7 @@ final class SubscribeTask implements Runnable {
 
 > 多次调用 `subscribeOn`，`create` 和 `map` 都会执行在最前面的 `subscribeOn` 调度的线程中，即使 `map` 在 `subscribeOn` 之后调用。这并不是说 `subscribeOn` 只有第一次生效。实际上，`subscribeOn` 每次调用都会生效，多次链式调用实质就会导致订阅流程中的代码被层层包裹于不同的线程中。而 `create` 和 `map` 中我们写的代码都是执行在发布流程的，发布流程的代码都是由最内部的订阅流程 `create` 往外层层调用各层的 `Observer`，所以多个 `map` 都会执行在 `create` 所在线程，表现出来就是发布流程只会受到第一个 `subscribeOn` 的影响，而订阅流程会受到每次 `subscribeOn` 影响。
 
-#### 第四步：observeOn
+### 第四步：observeOn
 ```
 public final Observable<T> observeOn(Scheduler scheduler) {
     return observeOn(scheduler, false, bufferSize());
@@ -320,17 +320,17 @@ static final class ObserveOnObserver<T> extends BasicIntQueueDisposable<T>
 
 > 注意：`observeOn` 控制的是它**之后**的发布流程执行线程，多次调用 `observeOn` 可以改变多次后续步骤中属于**发布流程**的执行所在线程，比如 `map` 等操作符。
 
-#### 第五步：subscribe
+### 第五步：subscribe
 最后的 `subscribe` 就是订阅流程的起点，从它开始依次调用前一步 `Observable` 的 `subscribeActual` 方法。
 
-#### 关于 Disposable
+### 关于 Disposable
 调用 `onSubscribe` 中的 `Disposable` 的 `dispose()` 方法，可以使上游不再调用下游观察者，或者说不再将数据/事件传给下游。
 
 每一层的 `Observer` 都是一个 `Disposable` 对象，经过层层包装，调用最后得到的 `Disposable` 的 `dispose()` 方法，就会从后往前调用依次调用每一层 `Observer` 的 `dispose()` 方法，例如 `map` 操作符对应的 `Observer` 仅仅是继续调用前一步的 `dispose()`，`subscribeOn` 和 `observeOn` 除了继续调用前一步的 `dispose()`，还会调整自己的工作状态。
 
 ## 3. 常用操作符
 
-#### flatmap
+### flatmap
 注意点：在 `flatMap` 方法参数 `Function` 对象的 `apply` 方法中返回的 `Observable` 末尾加上 `observeOn`来调度线程，行为会比较困惑。
 
 例如：

@@ -426,20 +426,20 @@ internal fun initExchange(chain: RealInterceptorChain): Exchange {
 ### CallServerInterceptor
 拦截拦截器已经完成了socket连接和tls连接，CallServerInterceptor的作用就是传输HTTP协议的起始行（RequestLine）、头部和body数据，核心功能都是由Exchange内部的ExchangeCodec完成，实质又是更内部的Okio和Socket。
 
-https://juejin.im/post/6844904191194824718#heading-18
-https://blog.csdn.net/xx326664162/article/details/107206670
-https://www.cnblogs.com/webor2006/p/10362197.html
-https://juejin.im/post/6844904102669844493#heading-6
+* https://juejin.im/post/6844904191194824718#heading-18
+* https://blog.csdn.net/xx326664162/article/details/107206670
+* https://www.cnblogs.com/webor2006/p/10362197.html
+* https://juejin.im/post/6844904102669844493#heading-6
 
 
 ## 建立连接的具体分析
-https://blog.csdn.net/chunqiuwei/article/details/73350657
-https://blog.csdn.net/chunqiuwei/article/details/74936885
-https://blog.csdn.net/chunqiuwei/article/details/76098827
+* https://blog.csdn.net/chunqiuwei/article/details/73350657
+* https://blog.csdn.net/chunqiuwei/article/details/74936885
+* https://blog.csdn.net/chunqiuwei/article/details/76098827
 
 ### Http 2.0 简要说明
-https://juejin.im/post/6844903667569541133#heading-6
-https://halfrost.com/http2-http-frames-definitions/
+* https://juejin.im/post/6844903667569541133#heading-6
+* https://halfrost.com/http2-http-frames-definitions/
 
 * 使用数据帧的形式，帧有不同的类型，起始行和头部为HEADER类型的帧，Body为DATA类型的帧，还有其他多种类型的帧。Frame Payload部分的格式由具体帧的类型决定。
 +-----------------------------------------------+

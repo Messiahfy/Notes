@@ -7,7 +7,7 @@ Android常用跨进程通信的方式：
 6.Socket
 
 # 1. 开启多进程
-&emsp;&emsp;给Android的四大组件在manifest文件中指定`android:process`属性，除此之外可以通过JNI在native层去fork一个进程，但这种方式不常用。
+&emsp;&emsp;给Android的四大组件在manifest文件中指定`android:process`属性，除此之外可以通过JNI在native层去fork一个进程，但这种方式不常用。  
 &#160; &#160; &#160; &#160;例如为activity指定进程：
 ```
 <activity android:name=".MainActivity">
@@ -23,7 +23,7 @@ Android常用跨进程通信的方式：
         android:name=".ThirdActivity"
         android:process="com.hfy.example.remote" />
 ```
-&#160; &#160; &#160; &#160;MainActivity在应用包名默认进程；SecondActivity的写法是简写，实际是在包名后加上:remote；ThirdActivity直接指定了进程名称。
+&#160; &#160; &#160; &#160;MainActivity在应用包名默认进程；SecondActivity的写法是简写，实际是在包名后加上:remote；ThirdActivity直接指定了进程名称。  
 &#160; &#160; &#160; &#160;`:冒号`的这种写法代表该进程为当前应用的私有进程，其他应用的组件不能和它在同一进程。
 ![指定进程后的三个进程.png](https://upload-images.jianshu.io/upload_images/3468445-f04ef9333a5308e2.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)、
 # 2. 多进程模式产生的问题

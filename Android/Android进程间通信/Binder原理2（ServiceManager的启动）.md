@@ -254,7 +254,7 @@ BR_NOOP和BR_TRANSACTION_COMPLETE以及操作引用计数的命令不需要特�
 
 binder_io类型是Service Manager内部用于存储binder object的数据类型
 
-##### svcmgr_handler
+#### svcmgr_handler
 ```
 int svcmgr_handler(struct binder_state *bs,
                    struct binder_transaction_data *txn,
@@ -360,7 +360,7 @@ int svcmgr_handler(struct binder_state *bs,
 
 `svcmgr_handler`函数处理完后，`binder_parse`会将结果通过`binder_send_reply`来将执行结果回复给Binder驱动，进而传递给客户端。然后继续循环处理，直到ptr < end为false，此时表示SM从Binder驱动读到的这一次数据已处理完，然后回到 `binder_write`函数中的for循环，再次通过`ioctl`传递`BINDER_WRITE_READ`来读取新消息，如果没有就休眠等待。
 
-##### binder_send_reply
+#### binder_send_reply
 ```
 void binder_send_reply(struct binder_state *bs,
                        struct binder_io *reply,

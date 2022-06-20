@@ -688,6 +688,8 @@ private void decodeFromRetrievedData() {
     }
 }
 ```
+> 回调到Target：notifyEncodeAndRelease --> notifyComplete --> EngineJob.onResourceReady --> notifyCallbacksOfResult --> CallResourceReady
+
 ### 解码和转换流程
 decodeFromData()
 -> decodeFromFetcher() //这里面会找到Glide中注册的ResourceDecoder和ResourceTranscoder，包装于LoadPath的DecodePath字段中

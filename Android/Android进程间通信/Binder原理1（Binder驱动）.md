@@ -523,7 +523,7 @@ static int binder_thread_write(struct binder_proc *proc,
 然后`copy_from_user(&tr, ptr, sizeof(tr))`就会将数据地址从用户空间复制到Binder内核空间。然后将数据交给`binder_transaction`处理：
 
 
-##### binder_transaction
+#### binder_transaction
 ```
 static void binder_transaction(struct binder_proc *proc,
 			       struct binder_thread *thread,
