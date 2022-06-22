@@ -1,4 +1,4 @@
-CPU 时间分为用户时间和系统时间。用户时间是执行用户态应用程序代码所消耗的时间;系统时间是执行内核态系统调用所消耗的时间，包括 I/O、锁、中断以及其他系统调用的时间。
+ CPU 时间分为用户时间和系统时间。用户时间是执行用户态应用程序代码所消耗的时间;系统时间是执行内核态系统调用所消耗的时间，包括 I/O、锁、中断以及其他系统调用的时间。
 
 ## 卡顿分析指标
 ### CPU使用率
@@ -46,6 +46,9 @@ CPU 饱和度首先会跟应用的线程数有关，如果启动的线程过多�
 
 ## 卡顿排查工具
 前面是命令的方式，还有图形化的简单方式。
+
+### 开发者模式
+HWUI呈现模式
 
 ### Traceview
 分析程序执行流程耗时，生成方式如下三种：
@@ -121,3 +124,14 @@ https://source.android.google.cn/devices/graphics
 ## 监控
 卡顿监控：Looper.setMessageLogging，监控每个消息的执行时间。
 FPS监控：Choreographer.postFrameCallback。不能直接使用两次回调的时间差，例如一次回调在第一帧的开始，二次回调在第二帧的末尾，最大间隔可以接近32ms，所以还应该通过反射获取Choreographer.mFrameInfo里面的VSYNC等时间数据，综合计算。
+
+使用systrace，但要字节码插桩（ASM+transform），不然手动去每个函数添加trace代码不现实，但要避免开始和结束的trace方法没有成对调用，可利用try-catch 
+
+## 方式
+* 动画：降低原生动画频率、并且低端机可以降级（去掉动画）、绘制泄漏
+* 缩小刷新区域、clipRect、invalidate
+* 过度绘制、移除无用背景
+* 层级过深
+* 按需加载、include、merge、viewStub
+* inflate：x2c
+* 去掉debug日志
