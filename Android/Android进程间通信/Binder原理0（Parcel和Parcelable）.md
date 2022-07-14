@@ -29,3 +29,6 @@ Parcel可以读写Active Object。通常存入Parcel的是对象的内容，而A
 2. FileDescriptor 文件描述符，因为传递后的文件描述符仍然基于相同的文件流操作，所以可以认为是Active Object的一种。
 
 Java层的Parcel只是一个中介，实际的读写操作都在C++部分
+
+## 匿名共享内存
+Android提供的Java层共享内存API：MemoryFile、SharedMemory，内部还是使用Linux的mmap

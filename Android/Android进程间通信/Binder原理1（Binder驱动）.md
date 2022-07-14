@@ -14,10 +14,10 @@ Linux内核中设备分为字符设备、块设备、网络接口。字符设备
 
 Binder架构采用分层架构设计，每一层都有其不同的功能：
 
-* Java应用层：对于上层应用通过调用AMP.startService，完全可以不用关心底层,经过层层调用，最终必然会调用到AMS.startService；
+* Java应用层：对于上层应用通过调用AMP.startService，完全可以不用关心底层，经过层层调用，最终必然会调用到AMS.startService；
 * Java Binder层：Binder通信是采用C/S架构，Android系统的基础架构便已设计好Binder在Java framework层的Binder客户类BinderProxy和服务类Binder；
-* Native Binder层：对于Native层,如果需要直接使用Binder(比如media相关)，则可以直接使用BpBinder和BBinder(当然这里还有JavaBBinder)即可，对于上一层Java IPC的通信也是基于这个层面；
-* Kernel Binder层：这里是Binder Driver, 前面3层都跑在用户空间,对于用户空间的内存资源是不共享的，每个Android的进程只能运行在自己进程所拥有的虚拟地址空间，而内核空间却是可共享的。真正通信的核心环节还是在Binder Driver。
+* Native Binder层：对于Native层，如果需要直接使用Binder(比如media相关)，则可以直接使用BpBinder和BBinder(当然这里还有JavaBBinder)即可，对于上一层Java IPC的通信也是基于这个层面；
+* Kernel Binder层：这里是Binder Driver，前面3层都跑在用户空间，对于用户空间的内存资源是不共享的，每个Android的进程只能运行在自己进程所拥有的虚拟地址空间，而内核空间却是可共享的。真正通信的核心环节还是在Binder Driver。
 
 Binder通信采用C/S架构，从组件视角来说，包含Client、Server、ServiceManager以及binder驱动，其中ServiceManager用于管理系统中的各种服务。Binder 在 framework 层进行了封装，通过 JNI 技术调用 Native（C/C++）层的 Binder 架构，Binder 在 Native 层以 ioctl 的方式与 Binder 驱动通讯。
 
@@ -444,7 +444,7 @@ static int binder_ioctl_write_read(struct file *filp,
 					 filp->f_flags & O_NONBLOCK);
 		trace_binder_read_done(ret);
 		if (!list_empty(&proc->todo))
-			wake_up_interruptible(&proc->wait);
+			wake_up_interruptible(&proc->wait); // 唤醒
 		if (ret < 0) {//错误处理
 			if (copy_to_user(ubuf, &bwr, sizeof(bwr)))
 				ret = -EFAULT;
@@ -507,8 +507,25 @@ static int binder_thread_write(struct binder_proc *proc,
 			break;
 		}
 
-		case BC_REGISTER_LOOPER:...
-		case BC_ENTER_LOOPER:...
+		case BC_REGISTER_LOOPER:
+			if (thread->looper & BINDER_LOOPER_STATE_ENTERED) {
+				thread->looper |= BINDER_LOOPER_STATE_INVALID;
+				binder_user_error("%d:%d ERROR: BC_REGISTER_LOOPER called after BC_ENTER_LOOPER\n",
+					proc->pid, thread->pid);
+			} else if (proc->requested_threads == 0) {
+				thread->looper |= BINDER_LOOPER_STATE_INVALID;
+				binder_user_error("%d:%d ERROR: BC_REGISTER_LOOPER called without request\n",
+					proc->pid, thread->pid);
+			} else {
+				proc->requested_threads--; // 已创建线程，则请求数量减1（申请创建线程时会加1）
+				proc->requested_threads_started++; // 已创建的线程数量加1
+			}
+			thread->looper |= BINDER_LOOPER_STATE_REGISTERED; // 表示时非主binder线程
+			break;
+		case BC_ENTER_LOOPER:
+			...
+			thread->looper |= BINDER_LOOPER_STATE_ENTERED; // 表示是主binder线程
+			break;
 		case BC_EXIT_LOOPER:...
 		case BC_REQUEST_DEATH_NOTIFICATION:
 		case BC_CLEAR_DEATH_NOTIFICATION:...
@@ -909,9 +926,16 @@ static int binder_thread_read(struct binder_proc *proc,
 ```
 retry:
     //在binder_thread_write中会设置thread->transaction_stack
+
+	// wait_for_proc_work是指当前线程todo队列为空，表示线程空闲
     wait_for_proc_work = thread->transaction_stack == NULL &&
 				list_empty(&thread->todo);
 	...
+	thread->looper |= BINDER_LOOPER_STATE_WAITING; // 先添加WAITING的标志，如果有任务处理，则会被去掉
+	if (wait_for_proc_work)
+		proc->ready_threads++; // 需要等待任务，则当前就绪的binder线程增加1个，会等待有任务后被唤醒
+	...
+
 	if (wait_for_proc_work) {
 		...
 		binder_set_nice(proc->default_priority);
@@ -919,22 +943,25 @@ retry:
 			if (!binder_has_proc_work(proc, thread))
 				ret = -EAGAIN;
 		} else
-		    //比如SM会在这里睡眠，然后等待客户端唤醒
+		    // 进程todo队列无数据，则休眠等待。这个函数的第二个参数为true（有任务）就不会阻塞
 			ret = wait_event_freezable_exclusive(proc->wait, binder_has_proc_work(proc, thread));
 	} else {//对于getService，第二次执行`talkWithDriver()`，wait_for_proc_work为false，会执行这里
 		if (non_block) {
 			if (!binder_has_thread_work(thread))
 				ret = -EAGAIN;
 		} else
+			// 线程todo队列无数据，则休眠等待。有数据时继续执行
 			ret = wait_event_freezable(thread->wait, binder_has_thread_work(thread));
 			//进入等待，等待Service Manager唤醒，SM响应后，客户端在这里开始继续执行
 	}
+	// 可以搜索wake_up_interruptible函数，查看唤醒的逻辑
+
 
 	binder_lock(__func__);
 
 	if (wait_for_proc_work)
-		proc->ready_threads--;
-	thread->looper &= ~BINDER_LOOPER_STATE_WAITING;
+		proc->ready_threads--; // 已经被唤醒，则需要处理任务，所以空闲的binder线程数量减1
+	thread->looper &= ~BINDER_LOOPER_STATE_WAITING; // 去掉waiting的标志
 
 	if (ret)
 		return ret;
@@ -1067,6 +1094,7 @@ retry:
 done:
 
 	*consumed = ptr - buffer;
+	// BC_ENTER_LOOPER对应主binder线程，不受requested_threads影响，所以最大线程数只限制了非主binder线程的数量
 	if (proc->requested_threads + proc->ready_threads == 0 &&
 	    proc->requested_threads_started < proc->max_threads &&
 	    (thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
@@ -1074,7 +1102,7 @@ done:
 	     /*spawn a new thread if we leave this out */) {
 		proc->requested_threads++;
 		...
-		//创建新线程
+		//创建新线程（BR_SPAWN_LOOPER命令在IPCThreadState的executeCommand函数中会启动binder线程），binder线程会执行ioctl，继续处理todo
 		if (put_user(BR_SPAWN_LOOPER, (uint32_t __user *)buffer))
 			return -EFAULT;
 		binder_stat_br(proc, thread, BR_SPAWN_LOOPER);

@@ -14,7 +14,7 @@
 
 
 ### 通过bindService的跨进程通信情况
-1. 使用bindService的方式跨进程通信，没有通过ServiceManager，而是通过AMS（当然，通过SM才能找到AMS）。服务端返回的IBinder一般是AIDL生产的类的实例，继承自Binder，Binder的构造函数中会创建对应的native层对象。通过Binder驱动把该IBinder对象传给客户端，先通过Parcel的`flatten_binder`把IBinder转换为`flat_binder_object`类型，会包含此Binder对象的指针，因为现在是把本进程的IBinder写入，会设置BINDER_TYPE_BINDER。
+1. 使用bindService的方式跨进程通信，没有通过ServiceManager，而是通过AMS（当然，通过SM才能找到AMS），经过AMS的作用在于可以协调回调service进程的`onBind`等函数、以及client进程的`onServiceConnection`函数。服务端返回的IBinder一般是AIDL生产的类的实例，继承自Binder，Binder的构造函数中会创建对应的native层对象。通过Binder驱动把该IBinder对象传给客户端，先通过Parcel的`flatten_binder`把IBinder转换为`flat_binder_object`类型，会包含此Binder对象的指针，因为现在是把本进程的IBinder写入，会设置BINDER_TYPE_BINDER。
 2. Binder驱动中，`binder_transaction`方法的BINDER_TYPE_BINDER分支，binder_get_ref_for_node会为这个IBinder对应的binder_ref类型生成desc值，也就会成flat_binder_object的handle值。
 3. 然后这个flat_binder_object再传到客户端，并还原成IBinder，就已经包含了handle值，所以客户端用它发起跨进程调用，是可以在Binder驱动中找到对应的进程的，并且通过指针会找到具体的那个远程Binder对象，去执行BBinder.onTrascat。
 
@@ -28,3 +28,7 @@ Server：Stub--Binder--BBinder
 一次复制：如果有返回值的binder通信，当然还是会有两次复制
 
 zygote：用socket，因为zygote自身用于fork其他进程，自身更简单更方便，如果自身用binder，fork也会复制binder线程
+
+
+### 异常处理
+在 Parcel.java 中，可以看到会把支持的各种异常对应特定的code来传递，如果不是支持的异常，会在createException方法中再抛出，寻找到`frameworks/base/core/jni/android_util_Binder.cpp`中`JavaBBinder`类（BBinder子类，Naive的服务类）的`onTransact`函数中catch不支持的异常则会打印出来。对客户端没有影响，只是不响应任何结果和异常

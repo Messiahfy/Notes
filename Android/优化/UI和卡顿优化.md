@@ -116,8 +116,6 @@ https://source.android.google.cn/devices/graphics
 [深入探索Android布局优化（上）](https://juejin.im/post/6844904047355363341)
 [深入探索Android卡顿优化（上）](https://juejin.im/post/6844904062610046990)
 
-[性能优化](https://www.jianshu.com/p/5950e1e8b31e)
-
 1. 布局优化：耗时在于加载xml和反射。减少嵌套，merge，避免过度绘制，异步加载（用的少），xml转代码（部分属性不能用代码设置，编译时间长），compose
 2. 卡顿监控：消息执行、Vsync回调
 

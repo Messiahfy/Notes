@@ -658,7 +658,7 @@ void IPCThreadState::joinThreadPool(bool isMain)
 
         // Let this thread exit the thread pool if it is no longer
         // needed and it is not the main process thread.
-        if(result == TIMED_OUT && !isMain) {
+        if(result == TIMED_OUT && !isMain) { // 非主binder线程超时退出
             break;
         }
     } while (result != -ECONNREFUSED && result != -EBADF);
@@ -716,6 +716,257 @@ status_t IPCThreadState::getAndExecuteCommand()
     return result;
 }
 ```
+
+```
+status_t IPCThreadState::executeCommand(int32_t cmd)
+{
+    BBinder* obj;
+    RefBase::weakref_type* refs;
+    status_t result = NO_ERROR;
+
+    switch ((uint32_t)cmd) {
+    case BR_ERROR:
+        result = mIn.readInt32();
+        break;
+
+    case BR_OK:
+        break;
+
+    case BR_ACQUIRE:
+        refs = (RefBase::weakref_type*)mIn.readPointer();
+        obj = (BBinder*)mIn.readPointer();
+        ALOG_ASSERT(refs->refBase() == obj,
+                   "BR_ACQUIRE: object %p does not match cookie %p (expected %p)",
+                   refs, obj, refs->refBase());
+        obj->incStrong(mProcess.get());
+        IF_LOG_REMOTEREFS() {
+            LOG_REMOTEREFS("BR_ACQUIRE from driver on %p", obj);
+            obj->printRefs();
+        }
+        mOut.writeInt32(BC_ACQUIRE_DONE);
+        mOut.writePointer((uintptr_t)refs);
+        mOut.writePointer((uintptr_t)obj);
+        break;
+
+    case BR_RELEASE:
+        refs = (RefBase::weakref_type*)mIn.readPointer();
+        obj = (BBinder*)mIn.readPointer();
+        ALOG_ASSERT(refs->refBase() == obj,
+                   "BR_RELEASE: object %p does not match cookie %p (expected %p)",
+                   refs, obj, refs->refBase());
+        IF_LOG_REMOTEREFS() {
+            LOG_REMOTEREFS("BR_RELEASE from driver on %p", obj);
+            obj->printRefs();
+        }
+        mPendingStrongDerefs.push(obj);
+        break;
+
+    case BR_INCREFS:
+        refs = (RefBase::weakref_type*)mIn.readPointer();
+        obj = (BBinder*)mIn.readPointer();
+        refs->incWeak(mProcess.get());
+        mOut.writeInt32(BC_INCREFS_DONE);
+        mOut.writePointer((uintptr_t)refs);
+        mOut.writePointer((uintptr_t)obj);
+        break;
+
+    case BR_DECREFS:
+        refs = (RefBase::weakref_type*)mIn.readPointer();
+        // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
+        obj = (BBinder*)mIn.readPointer(); // consume
+        // NOTE: This assertion is not valid, because the object may no
+        // longer exist (thus the (BBinder*)cast above resulting in a different
+        // memory address).
+        //ALOG_ASSERT(refs->refBase() == obj,
+        //           "BR_DECREFS: object %p does not match cookie %p (expected %p)",
+        //           refs, obj, refs->refBase());
+        mPendingWeakDerefs.push(refs);
+        break;
+
+    case BR_ATTEMPT_ACQUIRE:
+        refs = (RefBase::weakref_type*)mIn.readPointer();
+        obj = (BBinder*)mIn.readPointer();
+
+        {
+            const bool success = refs->attemptIncStrong(mProcess.get());
+            ALOG_ASSERT(success && refs->refBase() == obj,
+                       "BR_ATTEMPT_ACQUIRE: object %p does not match cookie %p (expected %p)",
+                       refs, obj, refs->refBase());
+
+            mOut.writeInt32(BC_ACQUIRE_RESULT);
+            mOut.writeInt32((int32_t)success);
+        }
+        break;
+
+    case BR_TRANSACTION_SEC_CTX:
+    case BR_TRANSACTION:
+        {
+            binder_transaction_data_secctx tr_secctx;
+            binder_transaction_data& tr = tr_secctx.transaction_data;
+
+            if (cmd == (int) BR_TRANSACTION_SEC_CTX) {
+                result = mIn.read(&tr_secctx, sizeof(tr_secctx));
+            } else {
+                result = mIn.read(&tr, sizeof(tr));
+                tr_secctx.secctx = 0;
+            }
+
+            ALOG_ASSERT(result == NO_ERROR,
+                "Not enough command data for brTRANSACTION");
+            if (result != NO_ERROR) break;
+
+            Parcel buffer;
+            buffer.ipcSetDataReference(
+                reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
+                tr.data_size,
+                reinterpret_cast<const binder_size_t*>(tr.data.ptr.offsets),
+                tr.offsets_size/sizeof(binder_size_t), freeBuffer);
+
+            const void* origServingStackPointer = mServingStackPointer;
+            mServingStackPointer = __builtin_frame_address(0);
+
+            const pid_t origPid = mCallingPid;
+            const char* origSid = mCallingSid;
+            const uid_t origUid = mCallingUid;
+            const int32_t origStrictModePolicy = mStrictModePolicy;
+            const int32_t origTransactionBinderFlags = mLastTransactionBinderFlags;
+            const int32_t origWorkSource = mWorkSource;
+            const bool origPropagateWorkSet = mPropagateWorkSource;
+            // Calling work source will be set by Parcel#enforceInterface. Parcel#enforceInterface
+            // is only guaranteed to be called for AIDL-generated stubs so we reset the work source
+            // here to never propagate it.
+            clearCallingWorkSource();
+            clearPropagateWorkSource();
+
+            mCallingPid = tr.sender_pid;
+            mCallingSid = reinterpret_cast<const char*>(tr_secctx.secctx);
+            mCallingUid = tr.sender_euid;
+            mLastTransactionBinderFlags = tr.flags;
+
+            // ALOGI(">>>> TRANSACT from pid %d sid %s uid %d\n", mCallingPid,
+            //    (mCallingSid ? mCallingSid : "<N/A>"), mCallingUid);
+
+            Parcel reply;
+            status_t error;
+            IF_LOG_TRANSACTIONS() {
+                TextOutput::Bundle _b(alog);
+                ...
+            }
+            if (tr.target.ptr) {
+                // We only have a weak reference on the target object, so we must first try to
+                // safely acquire a strong reference before doing anything else with it.
+                if (reinterpret_cast<RefBase::weakref_type*>(
+                        tr.target.ptr)->attemptIncStrong(this)) {
+                    error = reinterpret_cast<BBinder*>(tr.cookie)->transact(tr.code, buffer,
+                            &reply, tr.flags);
+                    reinterpret_cast<BBinder*>(tr.cookie)->decStrong(this);
+                } else {
+                    error = UNKNOWN_TRANSACTION;
+                }
+
+            } else {
+                error = the_context_object->transact(tr.code, buffer, &reply, tr.flags);
+            }
+
+            //ALOGI("<<<< TRANSACT from pid %d restore pid %d sid %s uid %d\n",
+            //     mCallingPid, origPid, (origSid ? origSid : "<N/A>"), origUid);
+
+            if ((tr.flags & TF_ONE_WAY) == 0) {
+                LOG_ONEWAY("Sending reply to %d!", mCallingPid);
+                if (error < NO_ERROR) reply.setError(error);
+
+                constexpr uint32_t kForwardReplyFlags = TF_CLEAR_BUF;
+                sendReply(reply, (tr.flags & kForwardReplyFlags));
+            } else {
+                if (error != OK) {
+                    ...
+
+                    // ideally we could log this even when error == OK, but it
+                    // causes too much logspam because some manually-written
+                    // interfaces have clients that call methods which always
+                    // write results, sometimes as oneway methods.
+                    if (reply.dataSize() != 0) {
+                         alog << " and reply parcel size " << reply.dataSize();
+                    }
+
+                    alog << endl;
+                }
+                LOG_ONEWAY("NOT sending reply to %d!", mCallingPid);
+            }
+
+            mServingStackPointer = origServingStackPointer;
+            mCallingPid = origPid;
+            mCallingSid = origSid;
+            mCallingUid = origUid;
+            mStrictModePolicy = origStrictModePolicy;
+            mLastTransactionBinderFlags = origTransactionBinderFlags;
+            mWorkSource = origWorkSource;
+            mPropagateWorkSource = origPropagateWorkSet;
+
+            IF_LOG_TRANSACTIONS() {
+                TextOutput::Bundle _b(alog);
+                alog << "BC_REPLY thr " << (void*)pthread_self() << " / obj "
+                    << tr.target.ptr << ": " << indent << reply << dedent << endl;
+            }
+
+        }
+        break;
+
+    case BR_DEAD_BINDER:
+        {
+            BpBinder *proxy = (BpBinder*)mIn.readPointer();
+            proxy->sendObituary();
+            mOut.writeInt32(BC_DEAD_BINDER_DONE);
+            mOut.writePointer((uintptr_t)proxy);
+        } break;
+
+    case BR_CLEAR_DEATH_NOTIFICATION_DONE:
+        {
+            BpBinder *proxy = (BpBinder*)mIn.readPointer();
+            proxy->getWeakRefs()->decWeak(proxy);
+        } break;
+
+    case BR_FINISHED:
+        result = TIMED_OUT;
+        break;
+
+    case BR_NOOP:
+        break;
+
+    // 创建Binder线程
+    case BR_SPAWN_LOOPER:
+        mProcess->spawnPooledThread(false);
+        break;
+
+    default:
+        ALOGE("*** BAD COMMAND %d received from Binder driver\n", cmd);
+        result = UNKNOWN_ERROR;
+        break;
+    }
+
+    if (result != NO_ERROR) {
+        mLastError = result;
+    }
+
+    return result;
+}
+```
+
+```
+void ProcessState::spawnPooledThread(bool isMain)
+{
+    if (mThreadPoolStarted) {
+        String8 name = makeBinderThreadName();
+        ALOGV("Spawning new pooled thread, name=%s\n", name.string());
+        sp<Thread> t = sp<PoolThread>::make(isMain);
+        t->run(name.string()); // 执行PoolThread的run方法，会执行它的`threadLoop`方法，也就会执行joinThreadPool方法，去binder驱动中读取数据并处理
+        pthread_mutex_lock(&mThreadCountLock);
+        mKernelStartedThreads++;
+        pthread_mutex_unlock(&mThreadCountLock);
+    }
+}
+```
+
 这里的关键，一是`talkWithDriver()`，二是`executeCommand()`。`talkWithDriver()`方法会读出mIn和mOut，并调用ioctl执行到 binder_ioctl --> binder_ioctl_write_read --> binder_thread_write或binder_thread_read。也就是不断地和Binder通信，并执行命令。
 
 -----------------------------

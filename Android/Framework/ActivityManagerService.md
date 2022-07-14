@@ -146,7 +146,7 @@ AMS的systemReady中的其他代码，会执行：启动 Persistent 应用，启
 ActivityStarter中会执行到 startActivityUnchecked，然后mRootActivityContainer.resumeFocusedStacksTopActivities，然后 ActivityStack.resumeTopActivityUncheckedLocked -> resumeTopActivityInnerLocked
 
 * 让当前Activity暂停：startPausingLocked，最终会跨进程调用到App的ActivityThread
-* 创建新的Activity：StackSupervisor.startSpecificActivityLocked，如果进程已存在，则直接 realStartActivityLocked ，其中 ATMS中的ClientLifecycleManager.scheduleTransaction会推动其生命周期；而如果进程不存在，则会先创建进程，然后创建对应的运行环境，例如绑定到AMS等，然后回调Applocation的onCreate，然后AMS调用到 realStartActivityLocked 推动Activity的生命周期，App中的Activity在ActivityThread中创建。
+* 创建新的Activity：StackSupervisor.startSpecificActivityLocked，如果进程已存在，则直接 realStartActivityLocked ，其中 ATMS中的ClientLifecycleManager.scheduleTransaction会推动其生命周期；而如果进程不存在，则会先创建进程，然后创建对应的运行环境，例如绑定到AMS等，然后回调Application的onCreate，然后AMS调用到 realStartActivityLocked 推动Activity的生命周期，App中的Activity在ActivityThread中创建。
 
 https://blog.csdn.net/nanyou519/article/details/104735722
 
