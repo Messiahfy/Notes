@@ -376,7 +376,7 @@ public class MainActivity extends AppCompatActivity {
 ```
 
 ## 4. 作用域
-默认情况下，Component 每次调用 Module 中的 provide 方法或 Inject 构造函数时都会创建一个新的实例，如果我们需要单例，就要用到作用域注解。
+默认情况下，Component 每次调用 Module 中的 provide 方法或 Inject 构造函数时都会创建一个新的实例，如果我们需要单例，就要用到作用域注解。作用域机制可以保证在`@Scope`标记的`Component`作用域内，类为单例。
 
 @Singleton是javax.inject自带的作用域注解，这个名称没有实际意义，我们也可以用@Scope自定义任何名称的作用域注解。@Singleton的源码如下：
 ```
@@ -419,11 +419,9 @@ public interface CarComponent {
 注意点：
 1. 依赖注入实例的提供者的作用域注解必须和绑定的 Component 的 作用域注解一样
 2. Component 可以同时被多个作用域注解标记，也就是说 Component 可以和多个不同的作用域的依赖注入实例的提供者绑定使用。
-
-
-component的dependencies与component自身的scope不能相同，即组件之间的scope不同 ???
-Singleton的组件不能依赖其他的scope的组件，只能其他scope的组件依赖Singleton的组件。所以@Singleton一般用于全局级别的单例 ???
-没有scope的component不能依赖有scope的component ???
+3. component的dependencies与component自身的scope不能相同：
+4. Singleton的组件不能依赖其他的scope的组件，只能其他scope的组件依赖Singleton的组件。所以@Singleton一般用于全局级别的单例 ???
+5. 没有scope的component不能依赖有scope的component
 
 作用域注解后的单例都是局部单例，仅在同一个Component实例范围内是单例，在生成的DaggerXxxComponent中，会用同一个DoubleCheck来获取对象。要实现全局单例，就要用同一个Component，比如在Application中缓存一个Component，然后都用这个Component。
 
@@ -664,7 +662,3 @@ public class FrombulationActivity extends Activity {
 还有一种选择是使用 dagger.android 提供简化以上问题的方式，使用它需要学习额外的API和概念。
 
 https://www.jianshu.com/p/8060a260488d
-
-https://blog.csdn.net/qq_17766199/article/details/73030696
-
-https://juejin.im/post/6844903833328418824

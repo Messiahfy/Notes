@@ -326,7 +326,7 @@ static final class ObserveOnObserver<T> extends BasicIntQueueDisposable<T>
 ### 关于 Disposable
 调用 `onSubscribe` 中的 `Disposable` 的 `dispose()` 方法，可以使上游不再调用下游观察者，或者说不再将数据/事件传给下游。
 
-每一层的 `Observer` 都是一个 `Disposable` 对象，经过层层包装，调用最后得到的 `Disposable` 的 `dispose()` 方法，就会从后往前调用依次调用每一层 `Observer` 的 `dispose()` 方法，例如 `map` 操作符对应的 `Observer` 仅仅是继续调用前一步的 `dispose()`，`subscribeOn` 和 `observeOn` 除了继续调用前一步的 `dispose()`，还会调整自己的工作状态。
+在`ObservableCreate`的`subscribeActual`中会调用`Observer`的`onSubscribe`，然后每个`Observer`在`onSubscribe`也会调用下一个`Observer`的`onSubscribe`，每一层的 `Observer` 都是一个 `Disposable` 对象，经过层层包装，每个`Observer`都会持有前一个`Observer`，调用最后得到的 `Disposable` 的 `dispose()` 方法，就会从后往前调用依次调用每一层 `Observer` 的 `dispose()` 方法，例如 `map` 操作符对应的 `Observer` 仅仅是继续调用前一步的 `dispose()`，`subscribeOn` 和 `observeOn` 除了继续调用前一步的 `dispose()`，还会调整自己的工作状态。
 
 ## 3. 常用操作符
 
