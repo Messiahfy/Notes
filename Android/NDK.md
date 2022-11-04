@@ -15,3 +15,32 @@ toolchains：该目录包含目前NDK所支持的不同平台下的交叉编译�
 [官方ndk开发文档](https://developer.android.google.cn/ndk/guides/concepts)
 
 [终于找到一篇极佳的 NDK 入门文章](https://mp.weixin.qq.com/s/Pg4pKhSScK8NgtT2RDw2uQ)
+
+[NDK 系列（5）：JNI 从入门到实践，万字爆肝详解！](https://juejin.cn/post/7125338583959306248)
+
+[NDK 系列（6）：说一下注册 JNI 函数的方式和时机](https://juejin.cn/post/7125021894562349092)
+
+gradle配置示例：
+```
+android {
+    // ......
+
+    defaultConfig {
+        // ......
+        // 对应 com.android.build.api.dsl.ExternalNativeBuild
+        externalNativeBuild {
+            cmake {
+                cppFlags ''
+            }
+        }
+    }
+
+    // 对应 com.android.build.api.dsl.ExternalNativeBuildOptions
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version '3.18.1'
+        }
+    }
+}
+```

@@ -710,6 +710,8 @@ publishing {
 
 > Gradle内置的核心插件的特殊之处在于它们提供短名称，例如JavaPlugin：'java'，所有其他二进制插件必须使用插件 id 的完全限定形式（例如com.github.foo.bar）
 
+[Gradle 系列（2）手把手带你自定义 Gradle 插件](https://juejin.cn/post/7098383560746696718)
+
 ### init Script
 在普通构建脚本执行前率先执行的脚本，用得较少。[官方文档](https://docs.gradle.org/current/userguide/init_scripts.html#sec:using_an_init_script)
 
