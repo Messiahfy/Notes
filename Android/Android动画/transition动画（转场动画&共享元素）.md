@@ -169,6 +169,8 @@ Transition mFadeTransition =
 1. 调用此方法，传入`ViewGroup`（和`transition`），过渡动画框架会保存当前`ViewGroup`中的子`view`的状态和属性值。
 2. 在下一帧重绘的时候，会根据`view`的改变来执行动画
 
+> view被移除后，还可以做退场动画，是因为使用了overlay来绘制退场动画，view的draw方法中会调用overlay，让overlay内的view也绘制。
+
 ## 4. 限制
 * 过渡动画应用于`SurfaceView`可能无法正常显示，因为`SurfaceView`没有运行于`UI Thread`，因此更新可能与其他视图不同步。
 * 应用于TextureView时，某些特定的过渡类型可能无法产生所需的动画效果。
