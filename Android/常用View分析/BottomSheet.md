@@ -65,7 +65,7 @@ button.setOnClickListener {
 * addBottomSheetCallback：设置状态回调。
 
 ### 常见场景
-* 只有展开和隐藏两种状态：在bottomSheet布局高度较小时（小于前面说的默认折叠高度），折叠和展开是一个高度，所以我们在展开（或折叠）和隐藏状态直接切换就可以了，记得调用`setHideable(true)`。在bottomSheet布局高度较大时，还会存在折叠状态，这时我们可以调用`setPeekHeight(0)`，让折叠状态的高度为0即可。
+* 只有展开和隐藏两种状态：在bottomSheet布局高度较小时（小于前面说的默认折叠高度），折叠和展开是一个高度，所以我们在展开（或折叠）和隐藏状态直接切换就可以了，记得调用`setHideable(true)`。在bottomSheet布局高度较大时，还会存在折叠状态，这时我们可以调用`setPeekHeight(0)`，让折叠状态的高度为0即可。或者`setSkipCollapsed(true)`，并且调用`setState(BottomSheetBehavior.STATE_EXPANDED)`
 * 只有折叠和展开两种状态：首先确保`setHideable(false)`，然后要让bottomSheet布局的高度大于折叠状态的高度。比如bottomSheet布局的高度大于默认折叠高度，那么这种情况自然存在折叠和展开两种状态，但也可以通过`setPeekHeight`来调整折叠状态的高度；如果bottomSheet布局的高度小于默认折叠高度，那么就更需要通过`setPeekHeight`来设置一个比bottomSheet布局高度更小的值。
 * 其他情况，基本都是以上情况的变种。对于setFitToContents方法，可能有一些特殊场景可以使用。
 

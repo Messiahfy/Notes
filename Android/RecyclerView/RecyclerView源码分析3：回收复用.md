@@ -1,5 +1,8 @@
 文章记录：https://juejin.cn/post/6984974879296585764
 
+https://mp.weixin.qq.com/s/SAFpBfLQR9IynrQdyE6oJw
+https://mp.weixin.qq.com/s/SqjGeGW2c-BhmO5kW7kSrA
+
 RecyclerView的视图缓存分为四层，分别是mAttachedScrap、mCachedViews、mViewCacheExtension（一般不用）、mRecyclerPool
 
 1.**mAttachedScrap**：屏幕内 item 快速复用（RecyclerView具有两次 onLayout() 过程，第二次 onLayout() 中直接使用第一次 onLayout() 缓存的 View，而不必再创建）。

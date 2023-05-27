@@ -62,5 +62,7 @@
         return changed;
     }
 ```
+> measure和layout中都会判断是否实际发生了改变，是的话才会实际执行测量和布局。比如一个view调用requestLayout，并没有引发它的兄弟节点的宽高和位置发生变化，那么它的兄弟节点就不需要实际测量和布局。（有些布局会测量多次才能确定最终布局，所以可能最后一次测量宽高位置没有变化，但是前几次测量的结果发生了变化，仍有可能导致兄弟节点重绘）
+
 此时可知，如果layout布局有变化，还是会调用invalidate重绘自身。
 ![requestLayout()流程图](https://upload-images.jianshu.io/upload_images/3468445-e4818921905499f6.jpg?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)

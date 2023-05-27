@@ -26,3 +26,5 @@ System Server进程：
 | Core | BatteryService 等|
 | Other | InputManagerService<br/>WindowManagerService<br/>NotificationManager 等|
 
+#### Launcher
+AMS服务启动Launcher
