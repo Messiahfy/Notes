@@ -1,3 +1,5 @@
+https://docs.spring.io/spring-framework/reference/web/webmvc.html
+
 ## 概述
 Spring MVC围绕前台控制器模式设计，核心的Servlet，即DispatcherServlet，为请求处理提供了一个共享算法，而实际工作则由可配置的委托组件来执行。这种模式非常灵活，支持多种工作流程。
 
@@ -132,6 +134,8 @@ public class MyController {
 
 类上面也可以用@RequestMapping，如果在类上面使用@RequestMapping("/jxy")，那么访问就要使用http://localhost:8080/上下文/jxy/test
 
+> Model用于向请求域共享数据，在视图解析器生成html页面的时候读取；但前后端分离的话就很少使用了。
+
 ## 获取参数
 ### GET请求
 #### 1.直接声明参数
@@ -201,18 +205,69 @@ http://localhost:8080/springmvc_war_exploded/test?name=hfy
 不详细展开，直接列举部分方式：
 * 可以直接转为对象
 * @RequestParam 也可以用于获得提交表单中的数据
-* @RequestBody 
+* @RequestBody 将http请求体的数据转为java对象
 * HttpServletRequest
 
 
 ----------------
-@RequestMapping用于所有HTTP请求方法，具体的有@GetMapping、@PostMapping等注解可以使用，注解的produces参数，可以指定返回的MIME类型，比如json
+* @RequestMapping用于所有HTTP请求方法，具体的有@GetMapping、@PostMapping等注解可以使用，注解的produces参数，可以指定返回的MIME类型，比如json
+* RequestEntity参数，则能得到请求数据，使用RequestEntity.getHeaders()、RequestEntity.getBody()等。
 
-如果用@RestController注解类，那么其中的所有请求方法都直接返回字符串，不会使用视图解析
+https://www.cnblogs.com/throwable/p/11980555.html
 
-@ResponseBody一般用在方法上，指定某个方法不走视图解析器，直接返回字符串
-
-## 重定向和跳转
-可以用ModelAndView
+### 重定向和跳转
+可以用ModelAndView，包含了Model和设置视图的功能。使用Model、Map和ModelMap参数，实际传来的都是BindingAwareModelMap
 
 也可以拿到HttpServletResponse，不用视图解析器
+
+## 前后端分离
+前面的例子，用到视图解析器的话，就还是传统的前后端一体的方式，Controller返回的数据都对应页面。而现在前后端分离的情况，则返回的数据并不是一个页面，而是在响应体中携带数据。
+
+可以使用HttpServletResponse，直接设置响应体
+```
+@RequestMapping("/test")
+public void hello(HttpServletResponse response) throws IOException{
+    response.getWriter().print("hello");
+}
+```
+
+实际开发中，更多会使用@ResponseBody
+```
+@RequestMapping("/test")
+@ResponseBody
+public String hello() {
+    return "hahaha";
+}
+```
+使用了@ResponseBody，此时返回的数据不会再被视图解析器处理，而是直接放到http响应体中。
+
+也可以返回对象，并自动转换为json放到响应体中（需要配置json处理）：
+```
+@RequestMapping("/test")
+@ResponseBody
+public User hello() {
+    return new User();
+}
+```
+也就对应了最常见的移动端访问的方式。
+
+如果用@RestController注解类，就等于同时使用@Controller和@ResponseBody
+
+> 返回值使用 ResponseEntity ，表示返回的响应报文
+
+## 拦截器
+SpringMVC的拦截器作用于DispatcherServlet和Controller之间
+
+## 异常处理器
+HandlerExceptionResolver，SpringMVC默认使用 DefaultHandlerExceptionResolver
+
+## 完全代码注解配置SpringMVC
+完全注解，替代web.xml，使用AbstractAnnotationConfigDispatcherServletInitializer
+
+## SpringMVC的执行流程
+### 常用组件
+
+
+### DispatcherServlet
+* 初始化：DispatcherServlet继承自Servlet，它的初始化过程中可以看到重要的功能，比如 initHandlerMappings() 初始化Controller。
+* 处理请求：调用组件处理请求，比如重写了doGet、doPost等，都会调用processRequest-->doService-->doDispatch

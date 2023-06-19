@@ -312,11 +312,11 @@ public class Pen {
     }
 }
 ```
-然后通过studen这个id就可以获得Student实例，其中的pen也按此方式获得。
+然后通过student这个id就可以获得Student实例，其中的pen也按此方式获得。
 
-@Component可以加上名称参数，比如在Studen类上使用@Component("test")，此时就需要通过test这个id来获得Student实例。
+@Component可以加上名称参数，比如在Student类上使用@Component("test")，此时就需要通过test这个id来获得Student实例。
 
-> 和`@Component`作用相同的还有`@Respository`、`@Service`和`@Controller`，提供了语义化的作用
+> 和`@Component`作用相同的还有`@Repository`、`@Service`和`@Controller`，提供了语义化的作用，适用于controller、service、dao的分层结构
 
 ### @Scope
 @Scope用于配置作用域，可以用于类或者方法。
@@ -486,3 +486,6 @@ public class MyAspect {
 }
 ```
 也就是说，使用@Pointcut的话，可以复用切入点
+
+## 事务
+@Transactional 可以注解方法、类。还需要配置数据源。

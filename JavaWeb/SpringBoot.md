@@ -1,3 +1,4 @@
+https://docs.spring.io/spring-boot/docs/current/reference/html/index.html
 ## 自动配置原理
 @SpringBootApplication
     @SpringBootConfiguration  @Configuration  @Component

@@ -23,6 +23,8 @@ WebApp Root/WEB-INF/classes 用来放置应用程序用到的自定义类(.class
 WebApp Root/WEB-INF/lib 用来放置应用程序用到的JAR文件  
 WebApp Root/ 根目录下可存放可访问文件，如html，jsp等
 
+Servlet项目，按这种规定的项目结构，打war包放到tomcat运行。（Servlet 3.0 已经可以用注解替代web.xml）
+
 ### IDEA部署
 IDEA会给每个tomcat部署的项目单独创建配置文件
 
