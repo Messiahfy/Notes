@@ -44,7 +44,14 @@ CPU 饱和度首先会跟应用的线程数有关，如果启动的线程过多�
 
 另外一个会影响 CPU 饱和度的是线程优先级，线程优先级会影响 Android 系统的调度策略。在 CPU 繁忙的时候，线程调度会对执行效率有非常大的影响。
 
-## 卡顿排查工具
+读取 /sys/devices 中的 time_in_state
+
+通过轮询，前台30秒 后台10分钟 超过临界值，就缩短轮询间隔，缩短到30秒内， 每秒都检测  还是超过 就上报异常线程(本进程内cpu占用超过5%)堆栈，没有超过 就等一会儿再开始轮询。根据线程堆栈和cpu使用率 结合。有些场景可以忽略，比如手机温度高、电量低、节能模式等情况
+
+### 帧率和丢帧次数
+只考虑帧率，不能完全表现卡顿的情况，比如帧率达到55，连续丢了5帧，还是会有卡顿感（可以把统计时间减少，比如本来1s，改为100ms区间来统计）。
+
+## 线下卡顿排查工具
 前面是命令的方式，还有图形化的简单方式。
 
 ### 开发者模式
@@ -121,15 +128,28 @@ https://source.android.google.cn/devices/graphics
 
 ## 监控
 卡顿监控：Looper.setMessageLogging，监控每个消息的执行时间。
-FPS监控：Choreographer.postFrameCallback。不能直接使用两次回调的时间差，例如一次回调在第一帧的开始，二次回调在第二帧的末尾，最大间隔可以接近32ms，所以还应该通过反射获取Choreographer.mFrameInfo里面的VSYNC等时间数据，综合计算。
+FPS监控：Choreographer.postFrameCallback。不能直接使用两次回调的时间差，例如一次回调在第一帧的开始，二次回调在第二帧的末尾，最大间隔可以接近32ms，所以还应该通过反射获取Choreographer.mFrameInfo里面的VSYNC等时间数据，综合计算。还要考虑触摸事件以及开始滑动（ViewTreeObserver.OnScrollChangedListener ）等因素，比如页面静止时其实没必要计算帧率。Window.OnFrameMetricsAvailableListener也可以读取帧耗时信息
+部分插桩：线上可以对部分函数插桩，监控耗时函数。比如锁、循环、IO操作、绘制、方法体较大之类的函数。配合获取堆栈
+
+在子线程高频获取主线程的堆栈，重复的堆栈信息很可能就是耗时调用
 
 使用systrace，但要字节码插桩（ASM+transform），不然手动去每个函数添加trace代码不现实，但要避免开始和结束的trace方法没有成对调用，可利用try-catch 
 
+cpu监控，可以例如30s抓一次 /proc/%s/status等相关数据
+
+## ui绘制流程
+加载xml、测量、布局、绘制
+
 ## 方式
 * 动画：降低原生动画频率、并且低端机可以降级（去掉动画）、绘制泄漏
-* 缩小刷新区域、clipRect、invalidate
+* 缩小刷新区域、clipRect、invalidate，开发者选项 -> 显示GPU视图更新
 * 过度绘制、移除无用背景
 * 层级过深
 * 按需加载、include、merge、viewStub
 * inflate：x2c
 * 去掉debug日志
+* 消息重排、分散
+* Java锁
+* IO调用、binder调用、系统方法调用
+* 高频函数调用：单次时间短，多次也会累积较长时间
+* 缓存

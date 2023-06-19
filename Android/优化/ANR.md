@@ -27,6 +27,7 @@ nativePollOnce：一般就是当前消息之前存在历史耗时消息，导致
 Systrace和Debug类性能不好，仅适合线下使用。所以线上采样的方式还需要自行开发，例如Thread.getStackTrace内部使用了StackVisitor::WalkStack，可以对其做一些精简来使用。
 
 [ANR 优化实践系列 - 监控工具与分析思路](https://juejin.cn/post/6942665216781975582)
+https://juejin.cn/post/7181731795439157306
 
 ### 分析思路
 1. log（logcat、内核日志）、cpu、内存

@@ -21,10 +21,6 @@
 Client：Proxy--BinderProxy--BpBinder
 Server：Stub--Binder--BBinder
 
-复习时可以对照“听说你Binder机制学的不错，来面试下这几个问题”检验理解程度。
-
-
-
 一次复制：如果有返回值的binder通信，当然还是会有两次复制
 
 zygote：用socket，因为zygote自身用于fork其他进程，自身更简单更方便，如果自身用binder，fork也会复制binder线程

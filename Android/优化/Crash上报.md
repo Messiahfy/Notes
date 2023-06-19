@@ -1,5 +1,9 @@
-[参考](https://mp.weixin.qq.com/s/g-WzYF3wWAljok1XjPoo7w?)
+## Java Crash
+通过 Thread.setDefaultUncaughtExceptionHandler 设置全局异常处理器，自定义处理逻辑，例如上报
+
 ## 捕捉Native Crash
+[参考](https://mp.weixin.qq.com/s/g-WzYF3wWAljok1XjPoo7w?)
+
 Java代码发生异常导致崩溃时，会打印出异常所在的调用栈，可以快速定位问题所在，但是C/C++发生崩溃时，默认情况下没有详细的信息，难以排查问题。<br/>
 Native发生异常时，CPU通过异常中断触发异常处理流程，Linux中这些中断处理都使用信号量的方式，不同的异常有不同的信号量，针对各个信号量可以注册不同的信号处理函数。
 
@@ -35,3 +39,5 @@ int dladdr(void *addr, Dl_info *info);
 前面已经可以获得pc和各个寄存器的信息，SP是父函数即调用者的堆栈首地址，FP是父函数的堆栈结束地址，所以根据SP和FP就可以往上得出全部调用关系。
 
 > 以上叙述了Native异常分析的简要基本原理，实际中已经有一些开源库可以帮助我们快捷处理问题。例如谷歌的Breakpad，可以得到特殊格式的日志，再用它的minidump_stackwalk程序解析日志生成可以看到详细错误的文本，包含错误发生的共享库和相对偏移位置；我们再通过NDK中的addr2line得到哪一行代码发生错误。
+
+两种hook方式：plt hook、inline hook
