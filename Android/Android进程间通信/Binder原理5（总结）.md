@@ -12,6 +12,17 @@
 11. 应用进程被唤醒后，在`binder_thread_read`中继续执行到`BINDER_WORK_TRANSACTION`分支，操作数据，然后返回到`binder_ioctl_write_read`中，执行后续的`copy_to_user`将数据传到用户空间。然后返回到`talkWithDriver`再返回到`waitForResponse`执行`BR_REPLY`分支，执行最开始执行`transact`传入的reply（Parcel类型）的`ipcSetDataReference`函数，然后一直返回到`ServiceManagerProxy`的`getService`方法，会使用得到的handle创建对应的`BpBinder`，最后返回到Java层。
 12. 应用进程拿到了AMS对应handle的IBinder，就可以用它再次执行Binder通信流程与AMS通信。
 
+### 注册和查找服务
+1. 执行`ServiceManagerProxy.getservice`，会调用`Parcel.writeStrongBinder`把服务（IBinder）转换为特定数据结果放到Parcel中
+2. Java中的`Parcel.writeStrongBinder`会调用C++的`Parcel.writeStrongBinder`
+3. 调用C++的`Parcel.flatten_binder`，此时是处理本地binder，不会设置handle，但会设置cookie为该binder的指针
+4. 执行到Binder驱动的binder_transaction方法的BINDER_TYPE_BINDER分支，添加binder_node到Binder驱动内当前进程对应的proc的binder_node红黑树内，然后binder_get_ref_for_node方法会设置handle值（递增的int值）
+5. 唤醒ServiceManager，svcmgr_handler方法的SVC_MGR_ADD_SERVICE分支代码会添加该服务，取出Binder驱动中设置的handle值，将服务存起来。
+6. 通过字符串名称以及handle为0向ServiceManager请求服务，ServiceManager根据字符串名称找到该服务，然后得到该服务的handle，调用Binder驱动
+7. ServiceManager执行到Binder驱动的binder_transaction方法的BINDER_TYPE_HANDLE分支，把handle等数据放到了数据结构中，并且会通过binder_get_ref_for_node方法创建一个binder_ref（会记录它对应的目标进程的binder_node）放到Binder驱动中Client进程的binder_ref红黑树中
+8. 唤醒客户端，取出数据写入Parcel，在用户空间读取，可以看到ServiceManagerProxy.getService中调用`Parcel.readStrongBinder`，调用unflatten_binder，得到handle并传给ProcessState的getStrongProxyForHandle方法，这里会创建BpBinder（包含了handle）并返回
+9. 通过包含了handle的BpBinder执行到Binder驱动，就可以通过handle去自己进程对应的binder_proc里面找到binder_ref，通过binder_ref的target_node和target_proc唤醒该目标进程去跨进程执行任务。
+
 
 ### 通过bindService的跨进程通信情况
 1. 使用bindService的方式跨进程通信，没有通过ServiceManager，而是通过AMS（当然，通过SM才能找到AMS），经过AMS的作用在于可以协调回调service进程的`onBind`等函数、以及client进程的`onServiceConnection`函数。服务端返回的IBinder一般是AIDL生产的类的实例，继承自Binder，Binder的构造函数中会创建对应的native层对象。通过Binder驱动把该IBinder对象传给客户端，先通过Parcel的`flatten_binder`把IBinder转换为`flat_binder_object`类型，会包含此Binder对象的指针，因为现在是把本进程的IBinder写入，会设置BINDER_TYPE_BINDER。

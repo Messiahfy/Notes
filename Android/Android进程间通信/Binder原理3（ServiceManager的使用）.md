@@ -283,7 +283,29 @@ IPCThreadState::IPCThreadState()
 ```
 在这里回头看一下前面，从`ServiceManager`的`getService`开始：`ServiceManagerProxy.getService` -> `BinderProxy.getService` -> `BpBinder.transact` -> `IPCThreadState.transact`
 
-所以最终执行的是`IPCThreadState.transact()`，下面分段分析
+
+而注册服务，和查找服务类似，也是会调用BpBinder.transact
+```
+class ServiceManagerProxy implements IServiceManager {
+    ......
+
+    public void addService(String name, IBinder service, boolean allowIsolated)
+            throws RemoteException {
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        data.writeInterfaceToken(IServiceManager.descriptor);
+        data.writeString(name);
+        data.writeStrongBinder(service);
+        data.writeInt(allowIsolated ? 1 : 0);
+        mRemote.transact(ADD_SERVICE_TRANSACTION, data, reply, 0);
+        reply.recycle();
+        data.recycle();
+    }
+    ......
+}
+```
+
+所以最终执行的都是`IPCThreadState.transact()`，下面分段分析
 
 #### IPCThreadState.transact()
 ```
@@ -816,6 +838,7 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
             if (result != NO_ERROR) break;
 
             Parcel buffer;
+            // 将数据装入Parcel
             buffer.ipcSetDataReference(
                 reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
                 tr.data_size,
@@ -855,6 +878,7 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
             if (tr.target.ptr) {
                 // We only have a weak reference on the target object, so we must first try to
                 // safely acquire a strong reference before doing anything else with it.
+                // 调用BBinder::transact
                 if (reinterpret_cast<RefBase::weakref_type*>(
                         tr.target.ptr)->attemptIncStrong(this)) {
                     error = reinterpret_cast<BBinder*>(tr.cookie)->transact(tr.code, buffer,

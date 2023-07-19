@@ -733,6 +733,7 @@ static void binder_transaction(struct binder_proc *proc,
 		fp = (struct flat_binder_object *)(t->buffer->data + *offp);
 		off_min = *offp + sizeof(struct flat_binder_object);
 		switch (fp->type) {
+		// 向ServiceManager注册服务时，会使用BINDER_TYPE_BINDER或BINDER_TYPE_WEAK_BINDER
 		case BINDER_TYPE_BINDER:
 		case BINDER_TYPE_WEAK_BINDER: {
 			struct binder_ref *ref;
@@ -896,6 +897,70 @@ static void binder_transaction(struct binder_proc *proc,
 对于getService的情况，到这里Service Manager被唤醒，然后系统分为Binder客户端和服务端分别执行。
 
 对于SM响应的情况，到这里Binder客户端被唤醒
+
+binder_get_ref_for_node生成handle：
+```
+static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
+						  struct binder_node *node)
+{
+	struct rb_node *n;
+	struct rb_node **p = &proc->refs_by_node.rb_node;
+	struct rb_node *parent = NULL;
+	struct binder_ref *ref, *new_ref;
+	while (*p) {
+		parent = *p;
+		ref = rb_entry(parent, struct binder_ref, rb_node_node);
+		if (node < ref->node)
+			p = &(*p)->rb_left;
+		else if (node > ref->node)
+			p = &(*p)->rb_right;
+		else
+			return ref;
+	}
+	new_ref = kzalloc(sizeof(*ref), GFP_KERNEL);
+	if (new_ref == NULL)
+		return NULL;
+	binder_stats_created(BINDER_STAT_REF);
+	new_ref->debug_id = ++binder_last_id;
+	new_ref->proc = proc;
+	new_ref->node = node;
+	rb_link_node(&new_ref->rb_node_node, parent, p);
+	rb_insert_color(&new_ref->rb_node_node, &proc->refs_by_node);
+	new_ref->desc = (node == binder_context_mgr_node) ? 0 : 1;
+	for (n = rb_first(&proc->refs_by_desc); n != NULL; n = rb_next(n)) {
+		ref = rb_entry(n, struct binder_ref, rb_node_desc);
+		if (ref->desc > new_ref->desc)
+			break;
+		// desc递增，将作为handle使用
+		new_ref->desc = ref->desc + 1;
+	}
+	p = &proc->refs_by_desc.rb_node;
+	while (*p) {
+		parent = *p;
+		ref = rb_entry(parent, struct binder_ref, rb_node_desc);
+		if (new_ref->desc < ref->desc)
+			p = &(*p)->rb_left;
+		else if (new_ref->desc > ref->desc)
+			p = &(*p)->rb_right;
+		else
+			BUG();
+	}
+	rb_link_node(&new_ref->rb_node_desc, parent, p);
+	rb_insert_color(&new_ref->rb_node_desc, &proc->refs_by_desc);
+	if (node) {
+		hlist_add_head(&new_ref->node_entry, &node->refs);
+		binder_debug(BINDER_DEBUG_INTERNAL_REFS,
+			     "%d new ref %d desc %d for node %d\n",
+			      proc->pid, new_ref->debug_id, new_ref->desc,
+			      node->debug_id);
+	} else {
+		binder_debug(BINDER_DEBUG_INTERNAL_REFS,
+			     "%d new ref %d desc %d for dead node\n",
+			      proc->pid, new_ref->debug_id, new_ref->desc);
+	}
+	return new_ref;
+}
+```
 
 
 #### binder_thread_read

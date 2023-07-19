@@ -312,7 +312,7 @@ int svcmgr_handler(struct binder_state *bs,
         //客户端添加服务，会执行到Binder驱动中的bind_transaction的case BINDER_TYPE_BINDER，
         //其中的binder_get_ref_for_node就会为客户端分配好handle，Binder驱动传给SM后，在这里取出
         //（通过句柄可以在Binder驱动中当前进程对应的binder_proc->refs_by_desc中找到对应server的binder_ref，
-        //从binder_ref可以找到对应的binder_node，binder_node中存储了cookie，就是server中的BpBinder的地址）
+        //从binder_ref可以找到对应的binder_node，binder_node中存储了cookie，就是server中的BpBinder的指针地址）
         handle = bio_get_ref(msg);
         allow_isolated = bio_get_uint32(msg) ? 1 : 0;
         dumpsys_priority = bio_get_uint32(msg);
