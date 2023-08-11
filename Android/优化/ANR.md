@@ -11,7 +11,7 @@ anr会在 /data/anr 目录下面生成 traces.txt 文件。
 ### ANR 监控
 * 在运行期间FileObserver监听 /data/anr/ 目录下的否有新增".tarce"结尾文件来收集 ANR 事件，需要对包名时间等进行过滤。**这个方式仅作思路参考，Android 5 以上第三方app无权限**
 * 开启一个子线程 ANRWatchDog，每隔段时间往主线程发一个消息，然后去检查消息是否被执行
-* 监听 SIGNALQUIT 信号
+* 监听 SIGNALQUIT 信号，并检测主线程Looper中消息的when变量和当前时间比较，确定是否阻塞较久
 * Looper的setMessageLogging，消息执行前后间隔时间，可以缓存10S以上的数据，先进先出，达到保存ANR前10秒以上消息调度情况的目的
 
 ### 获取ANR日志

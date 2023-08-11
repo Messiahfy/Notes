@@ -86,6 +86,8 @@ Trace.endSection();
 
 执行后会生成html文件，可以用chrome打开
 
+### perfetto
+
 #### 分析结果
 可参考如下网页：
 https://developer.android.google.cn/topic/performance/tracing/navigate-report  
@@ -137,6 +139,10 @@ FPS监控：Choreographer.postFrameCallback。不能直接使用两次回调的�
 
 cpu监控，可以例如30s抓一次 /proc/%s/status等相关数据
 
+JankStats：Jetpack提供的卡顿监控库
+
+> 获取帧率 -- 抓堆栈定位卡顿函数 -- 部分代码插桩，确认函数耗时
+
 ## ui绘制流程
 加载xml、测量、布局、绘制
 
@@ -150,6 +156,6 @@ cpu监控，可以例如30s抓一次 /proc/%s/status等相关数据
 * 去掉debug日志
 * 消息重排、分散
 * Java锁
-* IO调用、binder调用、系统方法调用
+* IO调用、binder调用（adb shell am trace-ipc可以监控）、系统方法调用
 * 高频函数调用：单次时间短，多次也会累积较长时间
 * 缓存
