@@ -449,6 +449,9 @@ void layoutChunk(RecyclerView.Recycler recycler, RecyclerView.State state,
         }
         measureChildWithMargins(view, 0, 0);//测量该子view
         ......
+        // 布局，调用child的layout方法
+        layoutDecoratedWithMargins(view, left, top, right, bottom);
+        ......
     }
 ```
 

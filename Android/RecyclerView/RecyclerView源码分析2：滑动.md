@@ -22,8 +22,11 @@ int scrollBy(int delta, RecyclerView.Recycler recycler, RecyclerView.State state
         return 0;
     }
     final int scrolled = absDelta > consumed ? layoutDirection * consumed : delta;
+    // 偏移所有子view
     mOrientationHelper.offsetChildren(-scrolled);
     mLayoutState.mLastScrollDelta = scrolled;
     return scrolled;
 }
 ```
+
+OrientationHelper.offsetChildren -> LayoutManager.offsetChildrenVertical（垂直方向的情况）-> RecyclerView.offsetChildrenVertical
