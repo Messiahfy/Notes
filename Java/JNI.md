@@ -272,3 +272,13 @@ JNI_CreateJavaVM(&jvm, (void**) &env, &vm_args);
 ```
 (*jvm)->DestroyJavaVM(jvm);
 ```
+
+## 10. 线程的关系
+Java调用jni时，Java和C/C++处于同一线程
+
+使用JNI的情况下，在C中调用pthread_create创建线程，JVM并不知道它，可以使用AttachCurrentThread将该线程和JVM关联起来，从而得到当前线程的 JNIEnv 指针
+
+## 11. 内存管理
+https://www.jianshu.com/p/787053d11dfd
+
+Local Reference、Global Reference、Weak Global Reference
