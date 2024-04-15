@@ -76,3 +76,42 @@ BottomSheetDialogFragment就是内部使用BottomSheetDialog的Fragment。
 
 ### 使用记录
 * 在底部有可点击控件的情况（比如tab控件），bottomSheet在tab控件的z轴下方，想在tab控件往上滑动把bottomSheet滑动出来，需要在bottomSheet的控件内部存在`isNestedScrollingEnabled()`为true的才能随便滑，因为BottomSheetBehavior内拦截事件的条件有考虑这个因素。但是如果当前触摸范围内的其他层级有可处理滑动事件的控件，比如tab控件和bottomSheet的z轴下方有一个铺满的列表，则BottomSheetBehavior可能不会拦截，此时可以尝试bottomSheet内使用NestedScrollView。具体原因可调试BottomSheetBehavior内拦截事件的各个条件。
+
+* BottomSheetDialogFragment不可折叠，要么完全显示，要么关闭，以及固定高度：
+```
+// 可以在BottomSheetDialogFragment的onViewCreated之后调用（dialog已经设置了view之后才行）
+val bottomSheet = dialog?.findViewById<View?>(com.google.android.material.R.id.design_bottom_sheet)
+bottomSheet?.let {
+    val behavior = BottomSheetBehavior.from(it)
+    behavior.skipCollapsed = true
+    behavior.state = BottomSheetBehavior.STATE_EXPANDED
+}
+
+// 如果要固定高度，可以设置我们自己的根布局高度：
+binding.root.updateLayoutParams {
+    height = customHeight
+}
+```
+
+* BottomSheetDialogFragment 背景：默认有白色背景，改为透明，可以修改BottomSheetDialog的theme：
+```
+<style name="MyBottomSheetDialog" parent="Theme.Design.Light.BottomSheetDialog">
+    <item name="bottomSheetStyle">@style/myBottomSheetStyle</item>
+</style>
+<style name="myBottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
+    <item name="android:background">@android:color/transparent</item>
+</style>
+```
+
+* 底部间隙问题：BottomSheetDialog在 1.4.0 版本加了个 `edgeToEdgeEnabled` 字段，以及本来就会判断导航栏透明情况，可能设置FitsSystemWindows导致加上padding，造成间隙。如果没有隐藏导航栏，没有问题，如果隐藏了导航栏，就可能有间隙。所以根据BottomSheetDialog的源码，隐藏导航栏的话，就要设置透明颜色，让这个判断为true。
+```
+boolean drawEdgeToEdge = edgeToEdgeEnabled && Color.alpha(window.getNavigationBarColor()) < 255
+if (container != null) {
+  container.setFitsSystemWindows(!drawEdgeToEdge);
+}
+if (coordinator != null) {
+  coordinator.setFitsSystemWindows(!drawEdgeToEdge);
+}
+```
+
+https://github.com/material-components/material-components-android/commit/c574e9ea23a6f54f7e0582495f9a9d3691b6af22
