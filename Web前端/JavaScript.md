@@ -4,6 +4,22 @@ JavaScript的实现包含三个部分：
 2. 文档对象模型（DOM）
 3. 浏览器对象模型（BOM）
 
+## JavaScript引擎简介
+JavaScript引擎主要功能就是帮助我们将JavaScript代码翻译CPU所能认识指令，最终被CPU执行；
+
+* V8：目前最流行的JavaScript引擎，由Google开发；
+* JavaScriptCore：Webkit中内置的JavaScript引擎，由苹果公司开发；
+
+Web APIs 是提供给引擎的功能，但不是 JavaScript 语言的一部分。引擎可以通过浏览器访问它们，并有助于访问数据或增强浏览器功能。比如文档对象模型（DOM）和获取 API。浏览器运行时和 Node.js 是运行时环境的例子。
+
+每当 JavaScript 引擎接收到脚本文件时，它首先会创建一个默认的执行上下文，称为 全局执行上下文 (GEC)。
+
+浏览器提供window全局对象
+
+* 本地对象 ( native object ) Object、Function、Number等。由 ECMAScript 实现提供并独立于宿主环境的任何对象
+* 内置对象 ( built-in object )由 ECMAScript 实现提供并独立于宿主环境的，在程序开始执行就出现的对象。Global、Math、JSON
+* 宿主对象 host object  比如Window
+
 ## 在HTML中使用JS
 在`head`标签中使用`script`标签，可以选择在`script`标签内嵌入JS代码，或者使用`script`标签的src属性引入外部JS代码的方式。
 
@@ -33,6 +49,39 @@ console.log(a);//1
 * 字符串可以由双引号或单引号表示，和Java一样不可变
 * 基本包装类型：Boolean、Number、String是特殊的引用类型。对基本类型：Boolean、Number、String调用它们的方法时，后台会创建它们的基本包装类型。基本包装类型只存在于将基本类型当作引用类型使用的瞬间。
 
+因为JavaScript是动态语言，所以声明JavaScript对象，并不需要像Java等静态语言必须先声明一个类，而是直接像声明一个map或者json数据格式一样：
+```
+const person = {
+  name: {
+    first: "Bob",
+    last: "Smith",
+  },
+  // …
+};
+```
+
+并且可以随时添加属性：
+```
+let foo = {
+        a: 1,
+    }
+console.log(foo.a) // 打印 1
+console.log(foo.b) // 打印 undefined
+foo.b = 2  // 给foo添加属性b，值为2
+console.log(foo.b) // 再次打印为 2
+```
+
+**所以要重点认识到，JavaScript动态语言的使用表现**
+
+**点表示法**，**括号表示法**，都可以访问JavaScript的对象属性：
+```
+person.age;
+person.name.first;
+
+person["age"];
+person["name"]["first"];
+```
+
 ## 作用域
 * 每个函数都有自己的执行环境（execution context），每个执行环境都有一个与之关联的变量对象（环境中定义的所有变量和函数都保存在这个对象中）（variable object），每个执行环境对应的作用域链由当前环境到各层包含环境一直到全局执行环境的每一个变量对象构成。（以函数定义的位置查找变量，而不是执行的位置）
 * 作用域链本质上是一个指向变量对象的指针列表，它只引用但不实际包含变量对象。
@@ -55,14 +104,29 @@ javascript和java的参数传递都是按值传递的，即只是把实参的值
 * 函数声明可以在声明前调用函数，函数表达式只能在表达式后调用函数。
 * 函数名本身是变量，所以函数也可以作为值来使用，例如作为参数传递到另一个函数或者作为另一个函数的结果返回。
 * 函数内部有两个特殊对象：arguments和this，this引用的是函数执行的环境对象，如在全局作用域中调用函数，this对象引用的就是window（严格模式为undefined），否则引用调用该函数的对象（通过把函数赋值为对象的属性），非全局作用域且无对象调用则this值为undefined。
-* 匿名函数this为window，严格模式为undefined
+* 匿名函数this为window（浏览器环境），严格模式为undefined
 * arguments包含传入的参数，另外还有一个名为calle（指针，指向拥有这个arguments的函数）的属性。
 * 函数是对象，所以函数也有属性和方法，例如length和prototype。length为接收的命名参数个数。
 
 apply和call（Function的原型中的函数）用于在特定作用域中调用函数，类似Kotlin的作用域函数，只不过JS的作用域函数需要传入作用域对象，而Kotlin中作用域函数的调用者就是作用域对象。bind函数可以使一个函数绑定作用域，并返回这个新函数。
 
 ### 闭包
+由于内部函数可以访问外部函数的作用域，因此当内部函数生存周期大于外部函数时，外部函数中定义的变量和函数的生存周期将比内部函数执行的持续时间要长。当内部函数以某一种方式被任何一个外部函数之外的任何作用域访问时，就会创建闭包。
+
 可以访问另一个函数的作用域中的变量的函数就是闭包。函数的活动对象表示函数的自身作用域，闭包会把外部函数的活动对象以及更上层的各级活动对象直到全局作用域添加到闭包的的作用域链中，也就是会引用外部函数的作用域链引用的各级活动对象。
+```
+function makeAdder(x) {
+  return function (y) {
+    return x + y;
+  };
+}
+
+var add5 = makeAdder(5);
+var add10 = makeAdder(10);
+
+console.log(add5(2)); // 7
+console.log(add10(2)); // 12
+```
 
 因为var声明变量，不会产生块级作用域，所以每个闭包引用的createFunctions()的活动对象中的i是同一个，所以如下代码会导致返回的函数数组中的每个函数返回的都是10：
 ```
@@ -76,6 +140,8 @@ function createFunctions(){
     return result;
 }
 ```
+闭包在循环中被创建，但他们共享了同一个词法作用域，在这个作用域中存在一个变量 i。这是因为变量 i 使用 var 进行声明，由于变量提升，所以具有函数作用域。当 function 的回调执行时，i 的值被决定。由于循环在事件触发之前早已执行完毕，变量 i（被10个闭包所共享）已经指向了最后一次循环也就是9。
+
 如果使用ES6中的let，则可以达到正常的状况
 
 函数调用时，会自动取得this和arguments属性，这两个属性默认只会搜索自身的活动对象，而不会访问外部函数中的这两个变量。默认情况，this为window对象。可以通过call()函数或者主动赋值this的方式来修改。
@@ -84,16 +150,42 @@ function createFunctions(){
 不属于任何其他对象的属性和方法，最终都是它的属性和方法。事实上，没有全局变量或全局函数；所有在全局作用域中定义的属性和函数，都是 Global 对象的属性
 
 ## 原型链 面向对象程序设计
+官方文档：
+* [对象原型](https://developer.mozilla.org/zh-CN/docs/Learn/JavaScript/Objects/Object_prototypes)，写得浅显易懂
+* [面向对象](https://developer.mozilla.org/zh-CN/docs/Learn/JavaScript/Objects/Object-oriented_programming)
 ES5中，JS没有类，对象只是：无序属性的集合，属性可以包含基本值、对象和函数。可以把这里的对象想象成键值对。创建一个自定义对象，可以创建一个Object实例，然后为它添加属性和方法，或者使用对象字面量的方式。
 
 ### 数据属性和访问器属性
 JS中通过new Object()或者字面量方式设置的属性都是`数据属性`，访问器属性要通过Object.defineProperty函数来定义
 
 ### 创建对象
-创建对象可以使用new Object或者字面量，还可以使用其他方式
+创建对象可以使用new Object或者字面量等。比如：
+```
+function createPerson(name) {
+  const obj = {};
+  obj.name = name;
+  obj.introduceSelf = function () {
+    console.log(`你好！我是 ${this.name}。`);
+  };
+  return obj;
+}
+```
 
 #### 构造函数模式
 任何函数使用new操作符就成为构造函数，Object和Date等都是函数。此方式会经历：1. 创建一个新对象 2. this指向新对象 3. 执行构造函数的代码 4. 返回新对象
+
+```
+function Person(name) {
+  this.name = name;
+  this.introduceSelf = function () {
+    console.log(`你好！我是 ${this.name}。`);
+  };
+}
+
+const salva = new Person("Salva");
+salva.name;
+salva.introduceSelf();
+```
 
 构造函数的属性和方法相当于静态方法。
 
@@ -122,7 +214,9 @@ JS中通过new Object()或者字面量方式设置的属性都是`数据属性`�
 ## DOM和BOM
 DOM是为了操作文档出现的API，document是其的一个对象
 
-BOM是为了操作浏览器出现的API，window是其的一个对象
+BOM是为了操作浏览器出现的API，window是其的一个对象，web中js的顶级作用域的this就是window。
+
+> DOM/BOM都是由浏览器提供
 
 DOM1级
 * DOM中，Node类型描述节点之间的关系和操作节点，所有节点类型都继承自Node类型。具有操作节点的方法
