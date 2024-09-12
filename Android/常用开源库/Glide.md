@@ -845,7 +845,7 @@ public synchronized void onEngineJobComplete(
     jobs.removeIfCurrent(key, engineJob);
 }
 ```
-这里就会把资源缓存到activeResources中，那什么时候会放到LRU缓存中呢？在view从window中移除后会清除ActiveResources缓存，并放入LRU缓存：CustomViewTarget中注册View的onViewDetachedFromWindow，回调时会执行request.clear() --> engine.release() --> EngineResource.release() --> engine.onResourceReleased()：
+这里就会把资源缓存到activeResources中，那什么时候会放到LRU缓存中呢？在view从window中移除后会清除ActiveResources缓存，并放入LRU缓存（但需要ViewTarget的clearOnDetach()方法才会注册OnAttachStateChangeListener）：ViewTarget中注册View的onViewDetachedFromWindow，回调时会执行request.clear() --> engine.release() --> EngineResource.release() --> engine.onResourceReleased()：
 ```
 public void onResourceReleased(Key cacheKey, EngineResource<?> resource) {
     activeResources.deactivate(cacheKey);
@@ -857,6 +857,14 @@ public void onResourceReleased(Key cacheKey, EngineResource<?> resource) {
 }
 ```
 这里就会把从activeResources中移除的缓存放到LRU缓存中。
+
+> Activity finish的时候，会通过ViewRootImpl.die()执行dispatchDetachedFromWindow
+> Fragment被remove时，它的view也会被remove，此时会执行dispatchDetachedFromWindow
+> RecyclerView recycleChildren的时候，触发ViewGroup.removeViewAt执行dispatchDetachedFromWindow
+
+如果没有调用ViewTarget的clearOnDetach()方法，则只会依赖调用Glide.with传入的例如Activity、Fragment产生的RequestManager的onStop、onDestory去取消请求和清空相关缓存。
+
+EngineResource.release()方法会让acquired减1，如果减到为0，表示没有被使用，则会让activeResources释放这个EngineResource，并放到普通的LRU内存缓存中。如果调用了ViewTarget的clearOnDetach()方法，则可以在view detach的时候释放，否则只能等到fragment、activity等生命周期结束的时候才能释放。
 
 ### 磁盘缓存
 #### 磁盘缓存策略
