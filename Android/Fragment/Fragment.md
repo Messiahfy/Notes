@@ -158,7 +158,7 @@ transaction.commit();
 * 您必须最后调用 commit()
 * 如果您要向同一容器添加多个Fragment，则您添加片段的顺序将决定它们在视图层次结构中的出现顺序
 
-如果您没有在执行移除Fragment的事务时调用 addToBackStack()，则事务提交时该Fragment会被销毁，用户将无法回退到该Fragment。 不过，如果您在删除Fragment时调用了 addToBackStack()，则Fragment会stopped，并在用户回退时将其resumed。
+如果您没有在执行移除Fragment的事务时调用 addToBackStack()，则事务提交时该Fragment会被销毁，用户将无法回退到该Fragment。 不过，如果您在删除Fragment时调用了 addToBackStack()，则Fragment会stopped，并在用户回退时将其resumed，这种情况视图会被销毁。
 
 > 提示：对于每个片段事务，您都可以通过在提交前调用 setTransition() 来应用过渡动画。
 
@@ -446,6 +446,7 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
 **Fragment重建的重点** Activity会自动重建Fragment，Fragment会重走完整生命周期。但如果Fragment调用了setRetainInstance（配置变更有效，但若activity被kill，则无效），则只会onDestroyView()和onDetach()，不会onDestroy()，重建时调用onAttach()和onActivityCreated()，不会调用onCreate()。    
 因为自动重建后的Fragment是一个新的对象，重建时应该让对象变量引用这个重建的Fragment，而不是再去创建一个新的（会造成存在两个Fragment），如果Fragment有用id或者tag标记，那么可以在Activity的onCreat()或者onRestoreInstanceState()使用id或者tag获取到重建的Fragment对象，但如果既没有id又没有tag，比如在ViewPager中使用的情况，那么可以通过FragmentManager的putFragment()和getFragment()方法配合使用，用于获取重建的那个Fragment对象（需要配合onSaveInstanceState中的Bundle使用）。
 
+Activity的onCreate中恢复Fragment实例后，还会在Activity的生命周期中推动Fragment生命周期执行（可以打断点调试）。比如Activity的onStart会触发FragmentStateManager执行createView()，从而把Fragment的view添加到布局中，所以重建时可以重新把Fragment的view添加到之前的布局中。**`FragmentStateManager#createView()`中会判断Fragment的原本父布局id对应的viewGroup是否存在，重建情况父布局不存在则忽略，存在则添加view到父布局内，非重建情况父布局不存在会抛出异常**，比如Fragment的父布局是动态添加的，重建时可能该父布局不存在。
 
 内存回收，杀死进程，fragment是新的对象；配置变更，进程还在，重建activity，这时保存的fragment是否还是原对象??
 
