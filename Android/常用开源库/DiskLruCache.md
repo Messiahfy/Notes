@@ -24,7 +24,7 @@ READ 3400330d1dfc7f3f7f4b8d4d803dfcf6
 ```
 
 1. DIRTY表示进入编辑状态，待写入，会在diskLruCache.edit(key)时创建，并没有真正的缓存。后面必然会跟一个CLEAN或者REMOVE，否则视为错误的临时文件需要删除
-2. CLEAN表示数据已经成功写入，其后还跟了当前数据的大小。
+2. CLEAN表示数据已经成功写入，其后还跟了当前数据的大小，valueCount大于1，则有多个数据。
 3. READ表示当前数据被get一次，用于更新Lru顺序。
 4. REMOVE表示当前数据已经被移除。
 
