@@ -202,6 +202,7 @@ public final class MainActivity_MembersInjector implements MembersInjector<MainA
 }
 
 ```
+注入的方式，会生成 `MembersInjector` 用于注入依赖
 
 > 字段不能使用 `private` 修饰，因为dagger2会生成同一个包内的代码，`非private` 修饰的字段才可以被访问到。
 
@@ -1361,6 +1362,44 @@ public final class DaggerMainActivityComponent {
 相关要点：
 1. 被依赖的Component生命周期更大，作用域不能相同
 2. 被依赖的Component必须暴露提供实例的接口，因为需要依赖的Component获取实例，是用被依赖的Componnet来提供实例。暴露的依赖不能多层传递
+
+## 辅助注入
+每次构造时都要自行传入参数的情况，可以使用辅助注入：
+```
+class MyDataService @AssistedInject constructor(
+    dataFetcher: DataFetcher, // 自动注入
+    @Assisted config: Config // 使用 @Assisted 注解的参数由用户注入
+)
+
+// 用于构造 MyDataService，可以传入参数
+@AssistedFactory
+interface MyDataServiceFactory {
+  fun create(config: Config): MyDataService
+}
+```
+
+使用方式：
+```
+// Dagger2的方式注入（如果使用Hilt则不用声明Componennt直接注入即可）
+@Component
+interface MyComponent {
+    fun createDataServiceFactory(): MyDataServiceFactory
+}
+
+class MyApp {
+  private val serviceFactory = DaggerMainComponent.builder().build().createDataServiceFactory()
+
+  fun setupService(config: Config): MyDataService {
+    val service = serviceFactory.create(config)
+    ...
+    return service
+  }
+}
+```
+
+如果使用Dagger2的自定义Componennt，则在Component实现类中将持有`Provider<MyDataServiceFactory>`对象，用于提供`MyDataServiceFactory`对象。如果使用Hilt则会根据注入位置在例如ActivityCImpl等类的内部持有`Provider<MyDataServiceFactory>`，用于注入`MyDataServiceFactory`对象。
+
+> 辅助注入不能使用`@Scope`，所以每次生成不同的实例。
 
 ## 异步依赖注入
 使用较少，且官方文档描述较清晰，这里不展开介绍。 [Dagger2 producers](https://dagger.dev/dev-guide/producers)
