@@ -38,6 +38,8 @@ SpecMode和`MATCH_PARENT`、`WRAP_CONTENT`的对应关系可以参考ViewGroup�
 &emsp;&emsp;每个`ViewGroup`都有`LayoutParams`内部类，`xml`布局文件解析时会根据子`view`设置的`layout_width`等属性为子`view`设置`LayoutParams`（也可以代码设定），`ViewGroup`根据子`Veiw`的`LayoutParams`决定传给子`View`的`Measure`和`onMeasure`的`widthMeasureSpec`和`heightMeasureSpec`。<br/>
 &emsp;&emsp;`onMeasure`中的两个参数都是由父视图传来，是由父视图根据子视图的`layoutParams`中的`lp.width`、`lp.marginLeft`等信息生成（可参照`FrameLayout`的`onMeasure`方法，其中调用父类`ViewGroup`的`measureChildWithMargins`，`measureChildWithMargins`中调用`getChildMeasureSpec`，此中设置了`MeasureSpec`的`mode`和`size`，并传给子视图）
 
+> MeasureSpec会根据LayoutParams得到，用于测量流程，所以一次测量、布局、绘制流程中，修改LayoutParams不会生效，因为不会再使用它，需要在下次流程中测量之前才会再使用它。
+
 **注意**：测量过程可能会有多次，例如parent为wrap_content，child为match_parent，这种情况LinearLayout就会先测量其他所有非match_parent的child，得到其中child的最大尺寸后，再用这个尺寸作为自身尺寸来测量match_parent的child。
 
 ## 3.Layout 布局
