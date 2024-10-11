@@ -46,7 +46,7 @@ public class FeatureTestSuite {
 ```
 
 ## 执行流程
-JUnit从JUnitCore的run方法开始执行，Request的classes方法将得到对应的Runner，对于JUnit4默认为BlockJUnit4ClassRunner，可以通过注解@RunWith来指定。
+JUnit从JUnitCore的run方法开始执行，Request的classes方法将得到对应的Runner，对于JUnit4默认为BlockJUnit4ClassRunner，可以通过注解@RunWith来指定。得到Runner后，会调用Runner的run方法
 
 AndroidJUnit4ClassRunner
 
