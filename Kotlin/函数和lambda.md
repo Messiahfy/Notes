@@ -207,6 +207,8 @@ html函数的参数类型，上下文为HTML类，所以此init函数将只能�
 
 Kotlin中的内联函数之所以被设计出来，主要是为了优化Kotlin支持Lambda表达式之后所带来的开销。Java中通过invokedynamic来解决lambda的额外开销，但由于Kotlin要兼容Java6，所以使用内联函数。我们可以用inline关键字来修饰函数，这些函数就成为了内联函数，内联函数本身和传给它的 lambda 表达式都将内联到调用处。它们的函数体在编译期被嵌入每一个被调用的地方，以减少额外生成的匿名类数，以及函数执行的时间开销。
 
+> **从kotlin 1.5开始，不兼容java 8以下版本，所以可以使用`-Xlambdas=indy`编译器选项应用invokedynamic命令，在kotlin 2.0版本则已经默认启用**：https://kotlinlang.org/docs/faq.html#which-versions-of-jvm-does-kotlin-target。
+
 以下情况我们应避免使用内联函数：
 1. 由于JVM对普通的函数已经能够根据实际情况智能地判断是否进行内联优化，所以我们并不需要对其使用Kotlin的inline语法，那只会让字节码变得更加复杂。一般对参数为函数类型的函数内联优化。
 2. 尽量避免对具有大量函数体的函数进行内联，这样会导致过多的字节码数量；
