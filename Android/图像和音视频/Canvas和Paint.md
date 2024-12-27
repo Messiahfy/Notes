@@ -66,6 +66,8 @@ useCenter   // 是否使用中心
 **saveLayer**：和`save`一样，但是会新建一个图层来绘制（在新的缓存区offScreen离屏渲染），从方法名来理解`save layer`就是保存当前图层，再新建一个图层绘制。调用`restore()`后才把离屏缓存绘制到当前`canvas`（相当于前一个图层）上。
 也就是说`saveLayer`会创建一个全新透明的`bitmap`，大小与指定保存的区域一致，其后的绘图操作都放在这个`bitmap`上进行。在绘制结束后，会直接盖在前一层的`Bitmap`上显示。
 
+通过canvas.saveLayer（）新建一个layer，新建的layer放置在canvas默认layer的上部，当我们执行了canvas.saveLayer（）之后，我们所有的绘制操作都绘制到了我们新建的layer上，而不是canvas默认的layer。
+
 总的来说，可以想象成第一层是真实显示的屏幕，第二层是正常使用的`canvas`，我们平常的绘制都是在`canvas`上绘制后再盖在屏幕上，而对`canvas`的矩阵变换比如`translate`方法就是把第二层这个`canvas`移动，然后绘制在此`canvas`上的图形相对于屏幕即有了偏移。而`saveLayer`方法则是再新建设定了矩形大小的第三层（甚至第四层、第五层），在新的层上绘制，如果上一层调用了矩阵变换例如平移，那么新建的层的坐标原点是以平移后的画布的左上角为准。
 
 `save`和`saveLayer`都返回一个`int`数值，用于`restoreToCount`时传入。
@@ -133,7 +135,9 @@ Paint.Style.FILL_AND_STROKE       //描边加填充
 可以对绘制的`bitmap`的颜色进行转换（实现滤镜效果），应该对纯色而不是位图的绘制也可以转换，参考[Paint之ColorMatrix与滤镜效果](https://blog.csdn.net/harvic880925/article/details/51187277)和[Paint之setColorFilter](https://blog.csdn.net/harvic880925/article/details/51253944)
 
 ### 3.10 setXfermode(Xfermode xfermode)
-Xfermode就是Transfer mode，可以实现图形混合，感觉像是在PS，暂时不管这里，参考[Paint之setXfermode](https://blog.csdn.net/harvic880925/article/details/51264653)
+Xfermode就是Transfer mode，可以实现图形混合，参考[Paint之setXfermode](https://blog.csdn.net/harvic880925/article/details/51264653)
+
+PorterDuffXfermode
 
 `setFilterBitmap(boolean filter)` 网上说对位图滤波处理，可以抗锯齿
 `setAntiAlias(boolean aa) ` 设置画笔是否抗锯齿 
@@ -171,3 +175,5 @@ Paint.Align.RIGHT 作为文字的右端，向左绘制
 `getTextBounds` 获得文字的宽高
 `getTextSize` 获得文字的尺寸
 `getTextWidths` 获得字符串中每个的字符的宽度
+
+https://www.zhihu.com/column/p/20735030

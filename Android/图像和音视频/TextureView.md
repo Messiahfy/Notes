@@ -14,3 +14,5 @@ SurfaceTexture从命名上来看，是一种由Surface转换过来的GL Texture�
 3.2 TextureView比SurfaceView好的地方
 - 可当做一个View使用进行各种动画和平移放缩操作，完全兼容View
 - SurfaceView的Surface完全由系统管理也是一个缺点，无法进行如离屏渲染之类的操作
+
+texture的概念？
