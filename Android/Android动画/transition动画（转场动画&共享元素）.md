@@ -169,7 +169,7 @@ Transition mFadeTransition =
 1. 调用此方法，传入`ViewGroup`（和`transition`），过渡动画框架会保存当前`ViewGroup`中的子`view`的状态和属性值。
 2. 在下一帧重绘的时候，会根据`view`的改变来执行动画
 
-> view被移除后，还可以做退场动画，是因为使用了overlay来绘制退场动画，view的draw方法中会调用overlay，让overlay内的view也绘制。
+> view被移除后，还可以做退场动画，是因为使用了overlay来绘制退场动画，view的draw方法中会调用overlay，让overlay内的view也绘制。（代码可以在`Visibility`的`onDisappear`方法中了解）
 
 ## 4. 限制
 * 过渡动画应用于`SurfaceView`可能无法正常显示，因为`SurfaceView`没有运行于`UI Thread`，因此更新可能与其他视图不同步。
@@ -241,7 +241,7 @@ public void captureEndValues(TransitionValues transitionValues) {
 }
 ```
 -------------------------------------
-在上面示例中，`captureStartValues()`和`captureEndValues()`函数都调用`captureValues()`来检索和存储值。 `captureValues()`检索的`view`属性是相同的，但它**在起始和结束场景中具有不同的值**。 该框架为`view`的起始和结束状态维护两个单独的键值对。
+在上面示例中，`captureStartValues()`和`captureEndValues()`函数都调用`captureValues()`来检索和存储值。 `captureValues()`检索的`view`属性是相同的，但它**在起始和结束场景中具有不同的值**。 该框架为`view`的起始和结束状态维护两个单独的键值对（**基类Transition中对`captureStartValues`和`captureEndValues`分别传入不同的TransitionValues实例用于区分**）。
 #### 5.3 创建animator
 &#160; &#160; &#160; &#160;在捕获了起始值和结束值后，还要重写`createAnimator()`方法来提供`animator`。框架调用此方法时，会传递`scene`的`根视图`和包含您捕获的`起始值`和`结束值`的`TransitionValues`对象。    
 &#160; &#160; &#160; &#160;框架调用`createAnimator()`方法的次数取决于开始和结束`scene`之间发生的更改。例如**淡出/淡入动画**。如果**起始场景**有**五个目标**，其中**两个**从**结束场景**中移除，并且**结束场景**具有来自**起始场景**的三个目标加上一个新目标，则框架调用`createAnimator()`**六次**：三次调用对停留在两个场景对象中的目标执行淡出和淡入动画（两个场景都存在则起始值和初始值相同，看不出淡入/淡出效果，但是还是会调用`createAnimator()`方法）；另外两个调用对从结束场景中删除的目标的执行淡出;另一个一个调用对结束场景中新目标执行淡入。    
