@@ -4,15 +4,16 @@
 以及一个指向v-node表中对应表项的指针。关闭一个描述符会减少相应的文件表表项中的引用计数。内核不会删除这个文件表表项，直到它的引用计数为零。
 * v-node表。同文件表一样，所有的进程共享这张v-node表，每个表项包含stat结构中的大多数信息，包括st_mode和st_size成员。
 
-#### 示例1
+#### 情况1
 描述符1和4通过不同的打开文件表表项来引用两个不同的文件，这是一种典型的情况，没有共享文件，并且每个描述符对应一个不同的文件。
 ![打开文件的内核数据结构，没有共享](../引用图片/打开文件的内核数据结构（未共享）.jpg)
 
-#### 示例2
+#### 情况2
 多个描述符也可以通过不同的文件表表项来引用同一个文件。例如，以同一个文件名调用open函数两次，就会发生这种情况。关键思想就是每个描述符都有它自己的文件位置，所以对不同描述符的读操作可以从文件的不同位置获取数据。
 ![打开文件的内核数据结构，没有共享](../引用图片/打开文件的内核数据结构（共享）.jpg)
 
-父子进程共享文件，子进程有一个父进程描述符的副本，父子进程共享相同的打开文件表集合，因此共享相同的文件位置。一个重要的结果就是，在内核删除相应文件表表项之前，父子进程都必须关闭了它们的描述符。
+#### 情况3
+通过fork调用，父子进程共享文件，子进程有一个父进程描述符的副本，父子进程共享相同的打开文件表集合，因此共享相同的文件位置。一个重要的结果就是，在内核删除相应文件表表项之前，父子进程都必须关闭了它们的描述符。
 
 ## 标准I/O都是缓存I/O（非标准I/O：内存映射则不需缓存在内核缓冲区）
 标准I/O都是缓存I/O，操作系统会将I/O的数据缓存在文件系统对应的内存页缓存中，即数据会先被拷贝到操作系统内核的缓冲区中，然后才会从操作系统内核的缓冲区拷贝到应用程序的地址空间。
@@ -21,3 +22,40 @@
 以read为例，当一个read操作会经历两个阶段：
 1. 等待数据就绪 (Waiting for the data to be ready)
 2. 将数据从内核拷贝到应用进程中 (Copying the data from the kernel to the process)
+
+# 源码分析
+unix系统调用API：open、read、write、lseek、close、
+glibc库，提供了很多系统调用的封装，比如open、read、write、lseek、close等。内部调用了sys_open、sys_read、sys_write、sys_lseek、sys_close等，比如glibc中的malloc、calloc、free等则使用了sys_brk。glibc库会帮助我们完成中断 陷入内核 调用内核中的系统调用
+
+
+1. open
+```
+#include <fcntl.h> // file control 头文件，包含open函数声明、O_RDONLY、O_WRONLY、O_RDWR等参数。
+
+int main(int argc, char const *argv[])
+{
+    int fd = open("test.txt", O_RDONLY);
+    return 0;
+}
+```
+通过中断进入内核
+sys_open
+do_sys_open
+do_sys_openat2
+
+get_unused_fd_flags  // 分配文件描述符
+do_filp_open // 打开文件的具体操作
+```
+   open
+     └── do_sys_open
+           └── do_sys_openat2
+               ├── getname          // 获取文件名
+               ├── get_unused_fd    // 分配文件描述符
+               └── do_filp_open     // 打开文件
+                    └── path_openat // 路径查找和打开
+```
+
+分析 open、read、write、close、sync
+
+例如读取，内核内存中的文件描述符会记录当前读取位置，下次读取则会从该位置开始，读取后内部会修改当前读取位。
+写入情况，也会先读取当前读写位置，写入后，更新位置
