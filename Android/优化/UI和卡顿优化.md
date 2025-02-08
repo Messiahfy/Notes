@@ -87,6 +87,11 @@ Trace.endSection();
 执行后会生成html文件，可以用chrome打开
 
 ### perfetto
+可以在开发者模式中找到系统跟踪（System Trace），打开后开始记录，关闭后将保存到本地文件，可以点击查看已保存的文件去查看。
+
+在 https://ui.perfetto.dev/ 网页上打开 .perfetto-trace 文件。
+
+也可以使用网页端来实时记录：https://ui.perfetto.dev/#!/record
 
 #### 分析结果
 可参考如下网页：
@@ -113,6 +118,10 @@ Looper  setMessageLogging
 * sdk/tools/bin/UiAutomatorViewer
 * adb shell uiautomator dump /data/local/tmp/uidump.xml 然后pull
 * Android Studio 内置 layout inspector
+* Jetpack androidx.metrics:metrics-performance
+* androidx.tracing:tracing-ktx
+* HealthStats、FrameMetricsAggregator、window.addOnFrameMetricsAvailableListener()
+
 ### 参考
 [检查GPU渲染速度和过度绘制](https://developer.android.google.cn/topic/performance/rendering/inspect-gpu-rendering)
 [Android 屏幕绘制机制及硬件加速](https://blog.csdn.net/qian520ao/article/details/81144167)

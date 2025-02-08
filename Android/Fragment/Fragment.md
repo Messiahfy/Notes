@@ -448,8 +448,6 @@ mFragments.saveAllState()会执行到FragmentManagerImpl.saveAllState()：
 
 Activity的onCreate中恢复Fragment实例后，还会在Activity的生命周期中推动Fragment生命周期执行（可以打断点调试）。比如Activity的onStart会触发FragmentStateManager执行createView()，从而把Fragment的view添加到布局中，所以重建时可以重新把Fragment的view添加到之前的布局中。**`FragmentStateManager#createView()`中会判断Fragment的原本父布局id对应的viewGroup是否存在，重建情况父布局不存在则忽略，存在则添加view到父布局内，非重建情况父布局不存在会抛出异常**，比如Fragment的父布局是动态添加的，重建时可能该父布局不存在。
 
-内存回收，杀死进程，fragment是新的对象；配置变更，进程还在，重建activity，这时保存的fragment是否还是原对象??
-
 Activity A 启动Activity B，然后挂后台 ，内存回收杀死进程后，再回到应用，恢复栈，此时恢复 Activity B，如果按返回键，则恢复Activity A。也就是说，重启应用，只恢复栈顶Activity，栈内其他Activity在需要时才恢复（栈顶Activity B透明的情况下，则栈顶之下的Activity A也会立即恢复）。所以把Activity作为初始化数据的载体并不适合，只有Application是保证先启动。
 
 
