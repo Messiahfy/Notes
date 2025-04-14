@@ -237,7 +237,9 @@ class RenderObjectToWidgetAdapter<T extends RenderObject> extends RenderObjectWi
   }
 }
 ```
-省略了其他属性和方法。调用`attachToRenderTree`，就会调用`createElement`，这里就会创建`RenderObjectToWidgetElement`，并且指定了`BuildOwner`。然后调用回调，也就是`element.mount`，将把`RenderObjectToWidgetElement`加入到`Element`树中，并调用`_rebuild()`，因为`Element`在创建时就持有对应的`Widget`，所以像`SingleChildRenderObjectElement`或者`ComponentElement`之类的有子Element的`Element`会使用`widget.child`来构造自己的子`Element`，递归`mount`完成Element树的构建。其中，如果是`RenderObjectElement`，会创建实际涉及布局绘制的`RenderObject`，`attachRenderObject`方法中会找到最近的祖先`RenderObjectElement`，并把当前的`RenderObject`作为祖先`RenderObjectElement`内的`renderObject`的child。然后会调用到`RenderObjectWithChildMixin`内的setter方法，又调用`adoptChild`，这里会调用`markNeedsLayout`等，建立父子关联，和调用`attach`设置`PipelineOwner`。
+省略了其他属性和方法。调用`attachToRenderTree`，就会调用`createElement`，这里就会创建`RenderObjectToWidgetElement`，并且指定了`BuildOwner`。然后调用回调，也就是`element.mount`，将把`RenderObjectToWidgetElement`加入到`Element`树中，并调用`_rebuild()`，因为`Element`在创建时就持有对应的`Widget`，所以像`SingleChildRenderObjectElement`或者`ComponentElement`之类的有子Element的`Element`会使用`widget.child`或者`widget.build`得到widget，再通过该widget来构造自己的子`Element`。
+比如`SingleChildRenderObjectElement`会在`mount`时通过`(widget as SingleChildRenderObjectWidget).child`得到childWidget，通过这个childWidget调用`createElement()`得到的Element作为`SingleChildRenderObjectElement`的child element；而`ComponentElement`会在`performRebuild()`的时候，调用widget的build方法，得到child widget，再通过这个widget的`createElement()`方法得到child element。
+创建child element后，会递归`mount`完成Element树的构建。其中，如果是`RenderObjectElement`，会创建实际涉及布局绘制的`RenderObject`，`attachRenderObject`方法中会找到最近的祖先`RenderObjectElement`，并把当前的`RenderObject`作为祖先`RenderObjectElement`内的`renderObject`的child。然后会调用到`RenderObjectWithChildMixin`内的setter方法，又调用`adoptChild`，这里会调用`markNeedsLayout`等，建立父子关联，和调用`attach`设置`PipelineOwner`。
 
 > markNeedsLayout内会判断_relayoutBoundary，一般会一直标记parent，而不是自己，直到根renderView，因为renderView调用scheduleInitialLayout把_relayoutBoundary设为自己。所以只会把某一个层级的parent添加到_nodesNeedingLayout。后续布局时，从这个parent开始，递归调用layout。
 
