@@ -850,3 +850,7 @@ core api更快，内存占用更少，tree api更方便
 [Gradle TransformAction](https://docs.gradle.org/current/userguide/artifact_transforms.html)
 
 Gradle在7.0版本新增的TransformAction会作为AGP中的Transform的替代品。AGP中定义了一些TransformAction的子类，TransformClassesWithAsmTask就是其中一个子类，它内部调用了 AsmClassVisitorFactory，我们可以通过AsmClassVisitorFactory来便捷地使用ASM处理class文件。
+
+https://developer.android.com/build/releases/gradle-plugin-api-updates?hl=zh-cn
+
+https://github.com/android/gradle-recipes

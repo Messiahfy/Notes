@@ -1,3 +1,5 @@
+官方文档：https://groovy-lang.org/objectorientation.html
+
 ## 1. 类
  `Groovy`类与`Java`对应类之间的主要区别是：
 * 没有可见性修饰符的类或方法会自动公开（可以使用特殊注释来实现包私有可见性）。
