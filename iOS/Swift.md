@@ -106,12 +106,70 @@ namesOfIntegers[16] = "sixteen"
 var airports: [String: String] = ["YYZ": "Toronto Pearson", "DUB": "Dublin"]
 ```
 
+> 如果创建一个数组、集合或字典，并将其赋值给一个变量，则创建的集合将是**可变的**；如果将数组、集合或字典分配给常量，则该集合是**不可变的**，并且其大小和内容无法更改。
+
 ## 控制流
 ### 常规控制流
 * for in
 * while
 * repeat-while，类似其他语言的do-while
 
+### switch-case
+1. 支持区间匹配：
+```
+switch approximateCount {
+case 0:
+    naturalCount = "no"
+case 1..<5:
+    naturalCount = "a few"
+}
+```
+
+2. 支持元组：
+```
+let somePoint = (1, 1)
+switch somePoint {
+case (0, 0):
+    print("\(somePoint) is at the origin")
+case (_, 0):
+    print("\(somePoint) is on the x-axis")
+case (0, _):
+    print("\(somePoint) is on the y-axis")
+case (-2...2, -2...2):
+    print("\(somePoint) is inside the box")
+default:
+    print("\(somePoint) is outside of the box")
+}
+// 输出 "(1, 1) is inside the box"
+```
+
+3. 支持值绑定
+switch 的 case 分支允许将匹配的值声明为临时常量或变量，并且在 case 分支体内使用
+```
+let anotherPoint = (2, 0)
+switch anotherPoint {
+case (let x, 0):
+    print("on the x-axis with an x value of \(x)")
+case (0, let y):
+    print("on the y-axis with a y value of \(y)")
+case let (x, y):
+    print("somewhere else at (\(x), \(y))")
+}
+```
+
+4. where
+case 分支可以使用 where 从句来判断附加的条件
+```
+let yetAnotherPoint = (1, -1)
+switch yetAnotherPoint {
+case let (x, y) where x == y:
+    print("(\(x), \(y)) is on the line x == y")
+case let (x, y) where x == -y:
+    print("(\(x), \(y)) is on the line x == -y")
+case let (x, y):
+    print("(\(x), \(y)) is just some arbitrary point")
+}
+```
 
 ### fallthrough
 Swift 中的 Switch 语句不会从每个情况的末尾贯穿到下一个情况中。相反，整个 switch 语句会在第一个匹配到的情况执行完毕之后就直接结束执行。比较而言，C 你在每一个 switch 情况末尾插入显式的 break 语句来阻止贯穿。避免默认贯穿意味着 Swift 的 switch 语句比 C 更加清晰和可预料，并且因此它们避免了意外执行多个 switch 情况。
@@ -255,7 +313,20 @@ swapTwoInts(&someInt, &anotherInt)
 print("someInt is now \(someInt), and anotherInt is now \(anotherInt)")
 // prints "someInt is now 107, and anotherInt is now 3"
 ```
+In-out 参数的传递方式如下：
+1. 当函数被调用时，参数的值会被复制。
+2. 在函数体内，副本被修改。
+3. 当函数返回时，副本的值被赋给原始参数。
+这种行为被称为拷入拷出（copy-in copy-out）或值结果调用（call by value result）。例如，当一个计算属性或一个带观察者的属性作为 in-out 参数传递时，它的 getter 在函数调用中被调用，而它的 setter 在函数返回时被调用。
+
+作为一种优化手段，当参数值存储在内存中的物理地址时，在函数体内部和外部均会使用同一内存位置。这种优化行为被称为引用调用（call by reference）; 它满足了 copy-in copy-out 模型的所有要求，同时消除了复制的开销。请使用 copy-in copy-out 给出的模型编写代码，而不依赖于引用传递优化，以便在有或没有优化的情况下都能正确运行。
+
 **也就是传递引用**
+
+### borrowing 和 consuming
+
+
+
 
 ### 函数类型
 ```
@@ -938,7 +1009,7 @@ print(mars)
 Swift的继承，可以使用`override`关键字重写方法、属性、属性观察器，并可以用`final`阻止重写
 
 ## 初始化
-Celsius 结构体实现了两个自定义的初始化器 init(fromFahrenheit:) 和 init(fromKelvin:) ， 它们用不同的温度单位初始化新的结构体实例：
+Celsius 结构体实现了两个自定义的初始化器 init(fromFahrenheit:) 和 init(fromKelvin:)，它们用不同的温度单位初始化新的结构体实例：
 ```
 struct Celsius {
     var temperatureInCelsius: Double
@@ -981,7 +1052,7 @@ Swift中的初始化器分为两种：
 * 指定初始化器(Designated)：负责完全初始化所有属性并调用父类初始化器
 * 便捷初始化器(Convenience)：只作为辅助初始化途径，必须最终委托给指定初始化器
 
-便捷初始化器，使用`convenience`修饰init函数，强制要求当前init函数调用当前类（**类的规则，结构体不需要添加convenience**）中的其他init函数，也就是委托给其他init函数（不能委托给父类的init函数）。（在Java/Kotlin的语法中，这种情况是不需要额外关键字的）
+便捷初始化器，使用`convenience`修饰init函数，强制要求当前init函数调用当前类（**这是类的规则，结构体不需要添加convenience**）中的其他init函数，也就是委托给其他init函数（不能委托给父类的init函数）。（在Java/Kotlin的语法中，这种情况是不需要额外关键字的）
 ```
 class Food {
     var name: String
@@ -1096,6 +1167,8 @@ class SomeClass {
 // 注意闭包花括号的结尾跟一个没有参数的圆括号。这是告诉 Swift 立即执行闭包。如果你忽略了这对圆括号，你就会把闭包作为值赋给了属性，并且不会返回闭包的值。
 ```
 
+> `init`函数可以使用`async`标记为异步函数，但这种情况在调用初始化函数时就需要使用`await`
+
 ## 反初始化
 Swift采用引用计数法来释放内存，所以相对于Java系语言，反初始化的调用时机更可靠，也就更能实际使用。
 ```
@@ -1157,6 +1230,24 @@ do {
     statements
 }
 ```
+
+比如：
+```
+do {
+    let data = try fetchData(from: "https://example.com")
+    print("成功获取数据: \(data)")
+} catch NetworkError.invalidURL {
+    print("无效的URL")
+} catch NetworkError.timeout {
+    print("请求超时")
+} catch let NetworkError.serverError(code) where code >= 500 {
+    print("服务器错误: \(code)")
+} catch {
+    print("其他错误: \(error)")
+}
+```
+
+> do-catch 只能捕获符合 Error 协议的抛出错误（通过 throw 语句抛出），运行时崩溃（fatalError）无法被 do-catch 捕获，因为它不是抛出（throw）的错误，而是直接终止程序的运行时异常。比如强制解包nil。
 
 ### 转换错误为可空类型
 使用`try?`通过将错误转换为可选项来处理一个错误
@@ -1271,7 +1362,7 @@ struct SundaeToppings {
 ## 协议
 协议相当于Java/Kotlin中的接口，但功能细节更多。
 
-```
+```swift
 // 协议中的属性只能使用 var，不能使用let，并且需要声明get、set表示可读、可写
 protocol SomeProtocol {
     var mustBeSettable: Int { get set }
@@ -1297,7 +1388,7 @@ protocol Togglable {
 ```
 
 Swift中的协议，可以使用`Self`，来达到实现协议时，确定`Self`类型为当前类型，也算是泛型语法的一种。对比Kotlin和Swift：
-```
+```kotlin
 //Kotlin
 
 interface Animal {
@@ -1312,7 +1403,7 @@ class Dog : Animal {
 ```
 Kotlin的Dog类，实现isSibling，参数类型只能是Animal。如果要让类型可以是Dog，就要使用泛型。
 
-```
+```swift
 //Swift
 
 protocol Animal {
@@ -1328,7 +1419,7 @@ class Dog: Animal {
 
 ### 协议组合
 要求一个类型一次遵循多个协议是很有用的：
-```
+```swift
 protocol Named {
     var name: String { get }
 }
@@ -1357,6 +1448,9 @@ extension Collection where Iterator.Element: TextRepresentable {
     }
 }
 ```
+
+### AnyObject
+如果协议遵循`AnyObject`，则只能使用类来实现协议，不能使用结构体或枚举。
 
 
 ## 泛型
@@ -1636,6 +1730,185 @@ closure()
 ```
 明确捕获person，person是`Optional<Person>`类型，而`Optional`是枚举也就是值类型，在使用了捕获列表的情况下，值类型被捕获的是拷贝，所以即使person设为nil，闭包引用的`Optional`实例拷贝还拥有一个对Person的强引用，从而不会导致Person实例被释放，等到闭包被释放后才会释放Person实例。
 
+## 所有权
+官方提案：https://github.com/swiftlang/swift-evolution/blob/main/proposals/0390-noncopyable-structs-and-enums.md
+
+在Swift中将一个值类型的变量赋值给另一个值类型变量，或者作为函数的参数传递，都会发生复制。而引用类型的变量赋值或传递时，则是复制内存地址。Swift中几乎所有类型在复制和传递时都会自动复制，但可能复制开销较高，或者想确保某个值只被一个地方使用，所以Swift新增了不可复制类型（`noncopyable`）也称为`move-only`类型，相应的就提供了`Copyable`和`~Copyable`两个协议，用于规定类型的所有权控制。
+
+`Copyable`是默认行为，不声明或者显式声明的效果一样。而如果希望一个类型不能被复制，则需要声明`~Copyable`协议，使用`~Copyable`后就表示此类型不具备可复制能力。
+
+例如，定义一个不可复制的文件描述符类型：
+```swift
+struct FileDescriptor: ~Copyable {
+  private var fd: Int32
+
+  init(fd: Int32) { self.fd = fd }
+
+  func write(buffer: Data) {
+    buffer.withUnsafeBytes { 
+      write(fd, $0.baseAddress!, $0.count)
+    }
+  }
+
+  // 结构体不能使用 deinit 声明，但由于不可复制结构体的值是唯一的，因此它们也可以具有 deinit 声明，这个声明在唯一实例的生命周期结束时自动运行
+  deinit {
+    close(fd)
+  }
+}
+```
+
+### 变量赋值转移控制权
+在使用时，由于`FileDescriptor`类型不能被复制，想要把该类型的变量赋值给另一个变量，就必须转移所有权，官方称为`consume`，也存在相应的`consume`关键字：
+```swift
+let f = FileDescriptor(fd: 1)
+let f1 = consume f // 控制权转移到 f1 变量，f 变量失效
+f1.write(data: "test") // ✅ 可以使用 f1 变量
+f.write(data: "test") // 🚫 f 变量失效，不能再使用，编译将报错
+```
+
+转移所有权后，原变量不能再使用，并且所有权也不能转移给多个变量：
+```swift
+let f = FileDescriptor(fd: 1)
+let f1 = consume f
+let f2 = consume f // 🚫 编译将报错，转移所有权超过一次
+```
+
+`consume`关键字一般情况也**可以省略**，因为这种情况显然是要转移控制权：
+```swift
+// 两者等效
+let f1 = consume f
+let f1 = f
+```
+
+### 函数参数转移控制权
+如果函数的参数类型是不可复制类型，那么必须指定所有权如何控制，有3种可选的方式：
+1. `consuming`：夺走所有权，使原始变量无效，不能再被使用，确保唯一资源不会在多个位置同时使用
+2. `borrowing`：临时借用所有权，不能转移所有权
+3. `inout`：可以转移控制权，但转移后必须给原变量重新赋一个新的值，让原变量仍然对一个值具有控制权
+
+#### consuming
+使用`consuming`声明参数，将夺取所有权：
+```swift
+func testConsuming(f: consuming FileDescriptor) -> FileDescriptor{
+    let f1 = f // consume f，控制权转移到 f1
+    // let f2 = f 🚫 报错，因为 f 已经被 consume
+    return f1
+    // return f 🚫 报错，控制权已转移到 f1，f不能再使用
+}
+
+let f = FileDescriptor(fd: 1)
+testConsuming(f: f)
+// f.write(data: "consuming") 🚫 报错，f 的所有权被 testConsuming 函数夺走，不能再使用 f 变量
+```
+
+#### borrowing
+使用`borrowing`声明参数，将会借出所有权，函数在内部可以访问该变量，但是不能消耗它。
+```swift
+func testBorrowing(f: borrowing FileDescriptor) -> FileDescriptor {
+    // let f1 = f 🚫 报错，f 只是借用所有权，并不能将借用的控制权转移给其他变量
+    f.write(data: "正常使用")
+    return FileDescriptor(fd: 2)
+    //    return f 🚫 报错，返回 f 也是想获取控制权，不被允许
+}
+
+let f = FileDescriptor(fd: 1)
+testBorrowing(f: f)
+f.write(data: "borrowing") // ✅ testBorrowing 函数只是借用控制权，函数返回后，f 仍然具有控制权，所以可以使用
+```
+
+#### inout
+
+```swift
+func testInout(f: inout FileDescriptor) {
+    let f1 = f // 可以转移控制权
+    f = FileDescriptor(fd: 2)  // 但转移后，必须为 f 设置新的值，以保证 f 仍然具有对某个值的控制权
+    return f1
+}
+
+var f = FileDescriptor(fd: 1)
+testInout(f: &f)
+f.write(data: "inout") // ✅ f 仍然具有所有权，可以继续使用，但控制权有可能是对于新的值，因为可能被 testInout 函数替换
+```
+
+### 方法转移控制权
+在不可复制类型的成员方法前，也可以使用`consuming`和`borrowing`修饰符来转移控制权，不添加则默认为`borrowing`。
+```swift
+extension FileDescriptor {
+  consuming func consume() {}
+}
+let x = FileDescriptor()
+x.consume()
+use(x) // 🚫 ERROR: x consumed by method `consume`
+```
+效果和参数中使用`consuming`和`borrowing`是一样的。
+
+### deinit 和 discard self
+常规的结构体和枚举并不支持`deinit`，因为它们可以被无限复制，不太适合`deinit`这个语义。但如果是`~Copyable`类型的结构体或枚举，因为它的变量是唯一的，必然有明确的变量生命周期结束的时机，所以可以使用`deinit`。
+
+以下是验证`deinit`的例子：
+```swift
+struct FileDescriptor: ~Copyable {
+    // ......
+    deinit {
+        print("FileDescriptor deinit")
+    }
+}
+
+func comsume(f: consuming FileDescriptor){
+    print("comsume start")
+    let f1 = f
+    print("comsume end")
+}
+
+func test1() {
+    print("test1 start")
+    let f = FileDescriptor(fd: 1)
+    comsume(f: f)
+    print("test1 end")
+}
+
+func test2() {
+    print("test2 start")
+    let f = FileDescriptor(fd: 1)
+    print("test2 end")
+}
+
+test1()
+// 打印：
+// test1 start
+// comsume start
+// comsume end
+// FileDescriptor deinit
+// test1 end
+
+test2()
+// 打印：
+// test1 end
+// test2 start
+// test2 end
+// FileDescriptor deinit
+```
+`test1`函数中，`f`被传递给`comsume`函数，当前栈中的`f`变量失去所有权，所以只要`consume`函数返回，`f`对象就会销毁。而在`test2`函数中，`f`没有被消耗，所以在`test2`函数执行完后，`f`的生命周期才结束。
+
+`~Copyable`类型支持了`deinit`，同时也支持在`consuming`成员方法中使用`discard self`避免`deinit`被调用。比如这个例子：
+```swift
+struct FileDescriptor: ~Copyable {
+    // ...
+
+    // 拿走这个文件描述符的所有权
+    consuming func take() -> Int32 {
+        let fd = self.fd
+        discard self // 避免调用 deinit
+        return fd
+    }
+
+    deinit {
+        close(fd)
+    }
+}
+```
+由于`take`方法用于转移所有权给调用者，不希望生命周期结束时调用`deinit`关闭文件描述符，因此使用了`discard self`。
+
 ## 访问控制
 Swift 为代码的实体提供个五个不同的访问级别。这些访问级别和定义实体的源文件相关，并且也和源文件所属的模块相关。
 * Open 和 Public：可以被任意源文件访问。
@@ -1660,7 +1933,7 @@ struct TrackedString {
 
 ## 支持运算符重载
 为`Vector2D`类型重载加法运算：
-```
+```swift
 struct Vector2D {
     var x = 0.0, y = 0.0
 }
@@ -1683,7 +1956,7 @@ Swift的运算符重载支持前缀、中缀、后缀
 
 ### Key-Path表达式
 和反射有点类似（标准库有`Mirror`用于发射）：
-```
+```swift
 struct SomeStructure {
     var someValue: Int
 }
@@ -1696,7 +1969,7 @@ let value = s[keyPath: pathToProperty]
 ```
 
 Key-Path 可以与泛型结合，用于抽象属性访问逻辑：
-```
+```swift
 func getValue<T, V>(_ object: T, keyPath: KeyPath<T, V>) -> V {
     return object[keyPath: keyPath]
 }
@@ -1704,7 +1977,7 @@ func getValue<T, V>(_ object: T, keyPath: KeyPath<T, V>) -> V {
 
 ### selector表达式
 Selector 表达式使用 #selector 语法，引用一个方法（Objective-C 方法或标记为 @objc 的 Swift 方法）的名称，生成一个 Selector 类型的值。Selector 本质上是 Objective-C 运行时中的方法标识符（SEL 类型），Swift 的 Selector 结构体是对其的封装。
-```
+```swift
 import UIKit
 
 class ViewController: UIViewController {
@@ -1724,6 +1997,27 @@ class ViewController: UIViewController {
 }
 ```
 
+### Key-Path 表达式
+Key-path 表达式引用一个类型的属性或下标。在动态语言中使场景可以使用 Key-path 表达式，例如观察键值对。格式为：
+```
+\<#类型名#>.<#路径#>
+```
+例如：
+```swift
+struct SomeStructure {
+    var someValue: Int
+}
+
+
+let s = SomeStructure(someValue: 12)
+let pathToProperty = \SomeStructure.someValue
+
+
+let value = s[keyPath: pathToProperty]
+// 值为 12
+```
+> 更多用法需查看文档
+
 ### Key-Path字符串表达式
 Key-Path 字符串表达式使用 #keyPath 语法，引用一个属性的路径（Objective-C 属性或标记为 @objc 的 Swift 属性），生成一个表示该路径的字符串。用于 KVC/KVO 等 Objective-C 运行时 API。
 ```
@@ -1732,7 +2026,7 @@ Key-Path 字符串表达式使用 #keyPath 语法，引用一个属性的路径�
 ```
 
 ### 条件编译块
-```
+```swift
 #if <#compilation condition#>
     <#statements#>
 #endif
@@ -1742,7 +2036,7 @@ Key-Path 字符串表达式使用 #keyPath 语法，引用一个属性的路径�
 定义运算符的优先级和结合性
 
 ### 可用性检查
-```
+```swift
 if #available(<#platform name#> <#version#>, <#...#>, *) {
     <#statements to execute if the APIs are available#>
 } else {
@@ -1757,9 +2051,24 @@ if #unavailable(<#platform name#> <#version#>, <#...#>) {
 ```
 
 ### Attributes
-属性语法，常见的比如`@main`、`@available`、`@objc`、`@dynamicMemberLookup`
+特性语法，常见的比如`@main`、`@available`、`@objc`、`@dynamicMemberLookup`、`@inlinable`
 ```
 @<#attribute name#>
 @<#attribute name#>(<#attribute arguments#>)
 ```
 > 附加的宏和属性包装器也使用特性语法
+
+dynamic 是 Swift 中的一个属性，用于标记一个类的属性或方法可以在运行时动态地添加或删除。当一个属性或方法被标记为 dynamic 时，Swift 编译器会生成额外的代码，以便在运行时动态地调用这些属性或方法。
+```
+@objc class Person: NSObject {
+    @objc dynamic func sayHello() {
+        print("Original sayHello called")
+    }
+    
+    @objc dynamic func sayGoodbye() {
+        print("Original sayGoodbye called")
+    }
+}
+```
+
+## Package Manager
