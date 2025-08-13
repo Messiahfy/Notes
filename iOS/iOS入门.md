@@ -117,3 +117,13 @@ cocoaPods https://juejin.cn/post/6844903731008536590
 - Gem：Ruby的包管理器。类似Node的npm，Python的pip。
 - Cocoapods：Swift 和 Objective-C 的依赖管理工具，使用Ruby语言开发，本质就是是一个Gem包。描述项目依赖和构建目标的文件Podfile也是使用Ruby语言编写。
 - Bundler：Bundler也是一个Gem包，用于管理当前目录下的Gem环境，例如Cocoapods的版本，达到统一版本的目的。和Android中的Gradle Wrapper作用类似。
+
+## 动态库
+每个 .dylib 文件内部会有一个 install name（即标识名），其他程序链接它时会记录这个名字。如果你没有正确设置这个 install name（比如使用 @rpath/xxx.dylib），系统就无法在运行时找到这个 dylib，导致崩溃。
+
+Xcode 默认会根据 -lxxx 自动查找 libxxx.dylib，容易出现前缀冲突。
+
+## 事件分发
+UIKit事件分发和处理
+
+https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/CocoaDrawingGuide/Introduction/Introduction.html#//apple_ref/doc/uid/TP40003290
