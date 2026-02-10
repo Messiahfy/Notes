@@ -3,7 +3,7 @@ Flutter支持触摸和鼠标事件，都属于Pointer事件，另外也支持按
 
 ## 事件处理源码分析
 `GestureBinding`的`initInstances()`函数中给`window`设置了触摸事件的回调
-```
+```dart
 window.onPointerDataPacket = _handlePointerDataPacket;
 
 void _handlePointerDataPacket(ui.PointerDataPacket packet) {
@@ -19,7 +19,7 @@ void _handlePointerDataPacket(ui.PointerDataPacket packet) {
 * `PointerUpEvent`：手指抬起事件
 * `PointerCancelEvent`：触摸事件取消
 
-```
+```dart
 void _flushPointerEventQueue() {
   //...
   while (_pendingPointerEvents.isNotEmpty)
@@ -27,7 +27,7 @@ void _flushPointerEventQueue() {
 }
 ```
 循环处理队列中的事件
-```
+```dart
 void _handlePointerEvent(PointerEvent event) {
   HitTestResult? hitTestResult;
   if (event is PointerDownEvent || event is PointerSignalEvent) {
@@ -63,7 +63,7 @@ void _handlePointerEvent(PointerEvent event) {
 
 ### 命中测试和事件分发
 首先看手指按下时，调用`hitTest`函数，这里会执行`RendererBinding`重写的`hitTest`：
-```
+```dart
 // RendererBinding#hitTest
 
 void hitTest(HitTestResult result, Offset position) {
@@ -78,7 +78,7 @@ void hitTest(HitTestResult result, Offset position) {
 }
 ```
 从`renderView`开始执行`hitTest`：
-```
+```dart
   bool hitTest(HitTestResult result, { required Offset position }) {
     if (child != null)
       child!.hitTest(BoxHitTestResult.wrap(result), position: position);
@@ -88,7 +88,7 @@ void hitTest(HitTestResult result, Offset position) {
 ```
 由于`renderView`的child，也就是我们写的根Widget对应的`RenderObject`是铺满屏幕的，所以这里直接传触摸事件的position，不需要考虑偏移。
 
-```
+```dart
 // RenderBox
 
 bool hitTest(BoxHitTestResult result, { required Offset position }) {
@@ -101,10 +101,10 @@ bool hitTest(BoxHitTestResult result, { required Offset position }) {
   return false;
 }
 ```
-一般我们写的widget对应的`RenderObject`是`RenderBox`的子类，这里看`RenderBox`的`hitTest`函数，将调用`hitTestChildren`或者`hitTestSelf`，其中一个返回true，就会把当前`RenderObject`包装为`HitTestEntry`添加到`HitTestResult`中。
+一般我们写的widget对应的`RenderObject`是`RenderBox`的子类，这里看`RenderBox`的`hitTest`函数，将调用`hitTestChildren`或者`hitTestSelf`，其中一个返回true，**就会把当前`RenderObject`包装为`HitTestEntry`添加到`HitTestResult`中**。
 
 那么先来看`hitTestChildren`，`RenderBox`中没有具体实现，因为有子节点的`RenderBox`才需要实现此函数。以`RenderShiftedBox`（`Padding`对应的`RenderPadding`的父类）为例：
-```
+```dart
 bool hitTestChildren(BoxHitTestResult result, { required Offset position }) {
   if (child != null) {
     final BoxParentData childParentData = child!.parentData as BoxParentData;
@@ -126,9 +126,8 @@ bool hitTestChildren(BoxHitTestResult result, { required Offset position }) {
 ---------------
 
 `PointerDownEvent`事件执行完命中测试后，将执行`dispatchEvent`：
-```
+```dart
 void dispatchEvent(PointerEvent event, HitTestResult? hitTestResult) {
-  assert(!locked);
   // No hit test information implies that this is a pointer hover or
   // add/remove event. These events are specially routed here; other events
   // will be routed through the `handleEvent` below.
@@ -150,7 +149,7 @@ void dispatchEvent(PointerEvent event, HitTestResult? hitTestResult) {
 }
 ```
 hitTestResult不为空，就循环调用`HitTestEntry`的`target`的`handleEvent`函数，而这个`target`就是之前执行命中测试时，添加的命中的各个`RenderObject`，以及最后添加的`GestureBinding`。`RenderObject`以及子类`RenderBox`都是空实现`handleEvent`函数，也就是不处理事件，一般我们要处理事件，会使用`Listener`、`GestureDetector`（内部也会使用`Listener`）等Widget，对应的`RenderObject`子类就是`RenderPointerListener`，那么我们来看`RenderPointerListener`的`handleEvent`函数：
-```
+```dart
 void handleEvent(PointerEvent event, HitTestEntry entry) {
   if (onPointerDown != null && event is PointerDownEvent)
     return onPointerDown!(event);
@@ -182,7 +181,7 @@ void handleEvent(PointerEvent event, HitTestEntry entry) {
 以上的方式，只是直接的控制不接收事件，不适合动态的判断谁来接收事件。比如`parent`和`child`都能接收事件，但点击`child`的时候，只应该响应`child`的点击事件，`parent`同理；这种情况是不适合用`IgnorePointer`之类的方式来处理的。
 
 那么在Flutter如何像Android中那样，可以动态处理事件冲突呢？这就要使用到`GestureDetecotor`，`GestureDetecotor`可以识别多种手势，并且能处理事件冲突。下面我们来分析`GestureDetecotor`是如何做到可以处理事件冲突的。
-```
+```dart
 //GestureDetector
 
 Widget build(BuildContext context) {
@@ -216,7 +215,7 @@ Widget build(BuildContext context) {
 以`onTap`，也就是点击事件的回调为例。使用`GestureDetecotor`的时候，设置了`onTap`，那么在这里的build中，会往`gestures`中设置`TapGestureRecognizer`对应的构造工厂。`TapGestureRecognizer`是``GestureArenaMember`的子类，表示参与手势竞技场的成员，具体作用在后面的分析中了解。这里的最后创建了`RawGestureDetector`
 
 `RawGestureDetector`是一个`StatefulWidget`，所以我们看到它对应的`RawGestureDetectorState`，首先是`initState`函数：
-```
+```dart
 // RawGestureDetector
 
 @override
@@ -227,7 +226,7 @@ void initState() {
 }
 ```
 初始化状态中主要就是执行`_syncAll`：
-```
+```dart
 // RawGestureDetector
 
 void _syncAll(Map<Type, GestureRecognizerFactory> gestures) {
@@ -249,7 +248,7 @@ void _syncAll(Map<Type, GestureRecognizerFactory> gestures) {
 这里的`gestures`参数就是前面`GestureDetector`的`build`函数中设置的map。重点就是调用了之前设置的构造和初始化函数，把构造的对象放到了`_recognizers`中，初始化时给`TapGestureRecognizer`设置了`onTap`回调函数。
 
 然后看到`RawGestureDetector`的`build`函数：
-```
+```dart
 // RawGestureDetector
 
 Widget build(BuildContext context) {
@@ -266,7 +265,7 @@ Widget build(BuildContext context) {
 ---------------
 
 这里就发现`GestureDetecotor`的最终实现也是`Listener`，给`Listener`设置了`onPointerDown`回调，发生`down`事件就会执行`_handlePointerDown`：
-```
+```dart
 // RawGestureDetectorState
 
 void _handlePointerDown(PointerDownEvent event) {
@@ -275,7 +274,7 @@ void _handlePointerDown(PointerDownEvent event) {
 }
 ```
 遍历`_recognizers`中的对象，在我们的例子中，这里就是`TapGestureRecognizer`，执行它的`addPointer`函数（在父类`GestureRecognizer`中）：
-```
+```dart
 //GestureRecognizer
 
 void addPointer(PointerDownEvent event) {
@@ -288,7 +287,7 @@ void addPointer(PointerDownEvent event) {
 }
 ```
 `addPointer`在`down`事件时调用，作用就是注册当前手指，继续看`TapGestureRecognizer`的父类中的`addAllowedPointer`函数：
-```
+```dart
 //BaseTapGestureRecognizer
 
 void addAllowedPointer(PointerDownEvent event) {
@@ -304,7 +303,7 @@ void addAllowedPointer(PointerDownEvent event) {
 }
 ```
 继续看`BaseTapGestureRecognizer`父类`PrimaryPointerGestureRecognizer`中的`addAllowedPointer`函数：
-```
+```dart
 //PrimaryPointerGestureRecognizer
 
 void addAllowedPointer(PointerDownEvent event) {
@@ -323,7 +322,7 @@ void addAllowedPointer(PointerDownEvent event) {
 1. 执行`startTrackingPointer`
 2. 初始化状态
 那么我们继续看`startTrackingPointer`里面做了什么：
-```
+```dart
 //OneSequenceGestureRecognizer
 
 void startTrackingPointer(int pointer, [Matrix4? transform]) {
@@ -338,7 +337,7 @@ void startTrackingPointer(int pointer, [Matrix4? transform]) {
 3. 添加手指ID到竞技场
 
 第一步的`handleEvent`函数在后面被调用的时候再分析，这里的重点是第三步，执行`_addPointerToArena`：
-```
+```dart
 //OneSequenceGestureRecognizer
 
   GestureArenaEntry _addPointerToArena(int pointer) {
@@ -348,7 +347,7 @@ void startTrackingPointer(int pointer, [Matrix4? transform]) {
   }
 ```
 主要是调用了`GestureArenaManager`的`add`函数
-```
+```dart
 //GestureArenaManager
 
 GestureArenaEntry add(int pointer, GestureArenaMember member) {
@@ -369,7 +368,7 @@ GestureArenaEntry add(int pointer, GestureArenaMember member) {
 * `GestureArenaManager`：持有所有的手势竞技场参与者，决定获胜者
 
 前面的流程，收到了down，分发事件到`GestureDetecotor`相关处理者。而在前面分析命中测试流程的时候，我们知道在处理完`widget`的命中测试后，最后会把`GestureBinding`也添加到`HitTestResult`中，也就是说，事件最后也会分发到`GestureBinding`的`handleEvent`函数：
-```
+```dart
 void handleEvent(PointerEvent event, HitTestEntry entry) {
   // 1
   pointerRouter.route(event);
@@ -385,7 +384,7 @@ void handleEvent(PointerEvent event, HitTestEntry entry) {
 }
 ```
 1. 前面在`startTrackingPointer`中向`pointerRouter`中注册了`PrimaryPointerGestureRecognizer`中的`handleEvent`函数，这里就会执行它：
-```
+```dart
 // PrimaryPointerGestureRecognizer
 
 void handleEvent(PointerEvent event) {
@@ -404,7 +403,7 @@ void handleEvent(PointerEvent event) {
 }
 ```
 对于当前情况，还是处于`down`事件，所以继续分析`handlePrimaryPointer`：
-```
+```dart
 // BaseTapGestureRecognizer
 
 void handlePrimaryPointer(PointerEvent event) {
@@ -426,7 +425,7 @@ void handlePrimaryPointer(PointerEvent event) {
 对于`down`事件，在这里将不会做任何事情
 
 2. 这里还是`down`事件流程，所以执行`gestureArena`的`close`函数：
-```
+```dart
 void close(int pointer) {
   final _GestureArena? state = _arenas[pointer];
   if (state == null)
@@ -436,7 +435,7 @@ void close(int pointer) {
 }
 ```
 继续执行`_tryToResolveArena`：
-```
+```dart
 void _tryToResolveArena(int pointer, _GestureArena state) {
   if (state.members.length == 1) {
     // 1.只有一个竞争成员，那么会直接调用该GestureArenaMember的acceptGesture
@@ -457,7 +456,7 @@ void _tryToResolveArena(int pointer, _GestureArena state) {
 
 3. 收到`up`事件
 由于监听`onTap`，所以相应的`Listener`只注册了`down`事件的监听，那么`up`事件就可以直接看到`GestureBinding`的`handleEvent`函数：之前`down`事件流程执行`PrimaryPointerGestureRecognizer`中的`handleEvent`，实际没有任何作用，等待后续处理。而此时再次调用`pointerRouter.route(event)`来执行之前注册的`PrimaryPointerGestureRecognizer`中的`handleEvent`，执行`handlePrimaryPointer`，将有实际作用：
-```
+```dart
 // BaseTapGestureRecognizer
 
 void handlePrimaryPointer(PointerEvent event) {
@@ -472,7 +471,7 @@ void handlePrimaryPointer(PointerEvent event) {
 }
 ```
 再次看到`handlePrimaryPointer`，此时事件是`up`，所以会执行`_checkUp()`：
-```
+```dart
 void _checkUp() {
   //...
   handleTapUp(down: _down!, up: _up!);
@@ -480,7 +479,7 @@ void _checkUp() {
 }
 ```
 执行`handleTapUp`：
-```
+```dart
 // TapGestureRecognizer
 
 void handleTapUp({ required PointerDownEvent down, required PointerUpEvent up}) {
@@ -499,7 +498,7 @@ void handleTapUp({ required PointerDownEvent down, required PointerUpEvent up}) 
 这里就会执行`onTap`函数。对于我们描述的父节点包含子节点，点击子节点的情况，由于子节点先注册了`handleEvent`函数，`PrimaryPointerGestureRecognizer`的`handleEvent`函数最后会判断是`up`或者`cancel`就会取消当前手指的注册函数，所以不会再调用父节点注册的`handleEvent`函数，也就解决了事件冲突。
 
 而后还会执行`gestureArena`的`sweep`函数：
-```
+```dart
 void sweep(int pointer) {
   final _GestureArena? state = _arenas[pointer];
   if (state == null)

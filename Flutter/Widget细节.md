@@ -523,11 +523,35 @@ class __PageWithStorageState extends State<_PageWithStorage> {
 
 ## 8. FocusNode、Shortcuts + Actions
 `FocusNode`、`Shortcuts` 和 `Actions` 是构建键盘交互、快捷键和焦点管理的核心机制，它们共同构成了 Flutter 的响应式输入系统。
-* FocusNode：管理 widget 的焦点状态（谁可以接收键盘输入）
-* Shortcuts：监听键盘事件，匹配快捷键（如 Ctrl+C）
-* Actions：定义快捷键的行为（如“复制”操作）
+* `FocusNode`：管理 widget 的焦点状态（谁可以接收键盘输入）
+* `Shortcuts widget`：监听键盘事件，匹配快捷键（如 Ctrl+C）。需要我们注册`ShortcutActivator`，用于定义触发快捷键的条件（比如`SingleActivator(LogicalKeyboardKey.keyC, control: true)` 表示 Ctrl+C 组合键），和对应的`Intent`(比如`DismissIntent`表示关闭当前焦点widget的意图)，Intent 对应的实际操作是 `Action`，在`Actions`中注册。
+* `Actions widget`：定义快捷键的行为（如“复制”操作），和 `Shortcuts` 配合使用。
 
-> `Shortcuts` 是一个 StatefulWidget，它内部会创建 `Focus`，`Focus`也是一个 StatefulWidget，没有传入 FocusNode 时，`Focus` 会自动创建一个`FocusNode`。
+`Shortcuts` 是一个 StatefulWidget，它内部会创建 `Focus`（但设置为不能获取焦点，为了子级焦点不处理事件时，冒泡到这里处理），`Focus`也是一个 StatefulWidget，没有传入 FocusNode 时，`Focus` 会自动创建一个`FocusNode`。按键事件发生时，子级如果没有处理，就会冒泡到`Shortcuts`中处理，根据`Actions`中注册的`Intent`和`Action`对应关系找到匹配的`Action`来执行。比如`_DismissModalAction`用于关闭当前焦点页面：
+```dart
+class _DismissModalAction extends DismissAction {
+  _DismissModalAction(this.context);
+
+  final BuildContext context;
+
+  @override
+  bool isEnabled(DismissIntent intent) {
+    final ModalRoute<dynamic> route = ModalRoute.of<dynamic>(context)!;
+    return route.barrierDismissible;
+  }
+
+  @override
+  Object invoke(DismissIntent intent) {
+    // 关闭当前页面
+    return Navigator.of(context).maybePop();
+  }
+}
+```
+
+> `Shortcuts`接收到冒泡事件，会以接收事件的组件的`context`开始查找组件树父级中的`Actions`，从而找到对应的`Action`。所以`Actions`作为`Shortcuts`的子级，依然可以生效，只要`Actions`是接收到事件的焦点组件的父级即可。一般情况，快捷键定义是统一的，实际的行为可能根据UI区域有不同实现，所以一般`Shortcuts`为`Actions`父级；但如果执行行为是统一的，而快捷键不同，则可以考虑`Actions`为`Shortcuts`的父级。
+
+> `ShortcutRegistrar`用于动态、临时的快捷键需求（内部也会使用`Shortcuts`），`Shortcuts + Actions`用于静态的快捷键配置需求。
+
 
 * `Focus` widget：管理一个普通的`FocusNode`，用于单个可聚焦元素（如按钮、输入框）。
 * `FocusScope` widget：是 `Focus` 的子类，管理一个 `FocusScopeNode`，`FocusScopeNode`是`FocusNode`的子类。通过 `FocusScope.of(context)`可以获得`FocusScopeNode`根结点。
