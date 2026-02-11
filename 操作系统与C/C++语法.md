@@ -30,11 +30,13 @@ int main(){
 void increment(int* value) {
     (*value)++;
 }
+increment(&a);
 
 // 或者使用引用
 void increment(int& value) {
     value++;
 }
+increment(a);
 ```
 
 ### const
@@ -175,10 +177,54 @@ C++的auto支持自动推导类型，比如有些类型很长，可以使用auto
 
 ## 类型转换
 c++除了能使用c语言的强制类型转换外，还有自己增加的几种类型转换：
-1. static_cast：相当于普通的强制类型转换，但不能保证安全。比如void*转为其他类型指针，又比如子类可以转为父类类型，但父类类型转为子类类型是不安全的。
-2. dynamic_cast：在类型层级关系之间转换，可以使用指针类型或者引用类型。指针类型转换失败返回空指针，引用类型转换失败会抛出std::bad_cast异常
-3. const_cast：把const常量转换为变量
-4. reinterpret_cast：reinterpret 的意思是重新解释，属于粗暴的转换
+1. static_cast：相当于普通的强制类型转换，但不能保证安全。比如void*转为其他类型指针，又比如子类可以转为父类类型，但父类类型转为子类类型是不安全的。用于执行编译时类型转换，它在编译时进行类型检查，但不执行运行时检查。
+```cpp
+double d = 3.14;
+int i = static_cast<int>(d); // 基本类型转换：double -> int
+
+class Base {};
+class Derived : public Base {};
+Derived d;
+Base* b = static_cast<Base*>(&d); // 上行转换：Derived* -> Base*
+// Base* b = &d; 隐式转换为父类型也是安全的，所以一般会使用隐式转换
+```
+> **使用`static_cast`转换子类型为父类型，可以显式和隐式转换，而Java中只支持隐式转换**
+
+2. dynamic_cast：专门用于处理多态继承中的向下转换和交叉转换（cross cast）。它在运行时检查转换的有效性和安全性。这是四个转换中唯一一个在运行时进行类型检查的。在类型层级关系之间转换，可以使用指针类型或者引用类型。指针类型转换失败返回空指针，引用类型转换失败会抛出std::bad_cast异常。**dynamic_cast 要求基类至少有一个虚函数（即必须是多态类型），因为运行时类型信息（RTTI）依赖于虚函数表。**
+```cpp
+class Base { virtual void foo() {} }; // 必须有虚函数（多态）
+class Derived : public Base {};
+
+Base* b = new Derived; // 可能指向Base，也可能指向Derived
+
+// 运行时检查：如果b确实指向一个Derived对象，则转换成功
+Derived* d = dynamic_cast<Derived*>(b);
+
+if (d != nullptr) {
+    // 转换成功，安全使用d
+} else {
+    // 转换失败，b并不指向Derived或其子类
+}
+```
+
+3. const_cast：用于添加或移除变量的 const 或 volatile 限定符。它是唯一能修改 const 属性的类型转换操作符。**修改原本声明为 const 的对象是未定义行为，除非对象本身是通过非 const 指针/引用初始化的。**
+```cpp
+void print(char* str); // 一个旧的、不修改str的函数，但参数没声明为const
+
+const char* greeting = "Hello";
+// print(greeting); // 错误：不能将const char* 传递给char*
+print(const_cast<char*>(greeting)); // 正确：去除了const
+
+// 添加 const 属性（较少使用，因为通常可以隐式添加）
+int x = 10;
+const int* cx = const_cast<const int*>(&x);
+```
+
+4. reinterpret_cast：reinterpret 的意思是重新解释，属于粗暴的转换。用于低级别的、基于比特位的类型转换，直接将一种类型的位模式重新解释为另一种类型。它是最不安全的类型转换操作符。这是一种“我完全知道我在做什么”的转换。它不进行任何偏移量调整或类型检查，只是简单地将比特位模式重新解释。它的可移植性非常差，极度危险，应仅在非常底层的编程（如驱动、操作系统内核、自定义序列化）中不得已而为之使用。
+```cpp
+int* ip = new int(65);
+char* cp = reinterpret_cast<char*>(ip); // 将int指针重新解释为char指针
+```
 
 ## 类
 c++保留了struct结构，主要就是为了兼容C语言，它和C++的类本质上一样，只是复合型数据。和基本类型一样，默认都是分配在栈中，使用new关键字则是分配在堆中。
