@@ -2016,6 +2016,15 @@ let pathToProperty = \SomeStructure.someValue
 let value = s[keyPath: pathToProperty]
 // 值为 12
 ```
+
+```swift
+// 把字符串按照空格进行分割
+text.split(whereSeparator: \.isWhitespace).map(String.init)
+
+相当于：
+text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+```
+
 > 更多用法需查看文档
 
 ### Key-Path字符串表达式
@@ -2070,5 +2079,3 @@ dynamic 是 Swift 中的一个属性，用于标记一个类的属性或方法�
     }
 }
 ```
-
-## Package Manager
