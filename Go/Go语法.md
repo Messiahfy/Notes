@@ -1176,6 +1176,78 @@ func cancelled() bool {
 }
 ```
 
+也可以使用 `context`，下面是一个三层级 goroutine 的取消例子：
+```go
+func main() {
+	fmt.Println("🚀 [主程序] 启动")
+
+	// 1. 创建根 Context (祖父)
+	// 注意：通常使用 context.Background() 作为根
+	ctx, cancel := context.WithCancel(context.Background())
+	
+	// 使用 defer 确保主程序退出时释放资源，防止 goroutine 泄漏
+	defer cancel()
+
+	// 2. 启动子协程 (父)
+	go func() {
+		// 从父 Context 派生子 Context
+		childCtx, childCancel := context.WithCancel(ctx)
+		defer childCancel() // 确保子 Context 退出时也调用 cancel
+
+		fmt.Println("  📂 [子协程] 启动")
+
+		// 启动孙协程 (子)
+		go func() {
+			// 再次派生，形成层级链
+			grandChildCtx, grandChildCancel := context.WithCancel(childCtx)
+			defer grandChildCancel()
+
+			fmt.Println("    📄 [孙协程] 启动并开始工作...")
+			
+			// 模拟孙协程的工作循环
+			for {
+				select {
+				case <-grandChildCtx.Done():
+					// 核心：监听取消信号
+					fmt.Printf("    🛑 [孙协程] 收到取消信号 (原因: %v)，退出。\n", grandChildCtx.Err())
+					return
+				default:
+					// 执行具体任务
+					fmt.Println("    ... 孙协程正在处理数据 ...")
+					time.Sleep(500 * time.Millisecond)
+				}
+			}
+		}()
+
+		// 模拟子协程自己的工作
+		for {
+			select {
+			case <-childCtx.Done():
+				fmt.Printf("  🛑 [子协程] 收到取消信号 (原因: %v)，退出。\n", childCtx.Err())
+				return
+			default:
+				fmt.Println("  ... 子协程正在监控 ...")
+				time.Sleep(500 * time.Millisecond)
+			}
+		}
+	}()
+
+	// 3. 主程序等待 2 秒，模拟业务运行一段时间
+	time.Sleep(2 * time.Second)
+
+	fmt.Println("\n⚠️ [主程序] 决定停止所有任务，调用 cancel()...")
+	// 4. 触发取消
+	// 这一行代码会触发连锁反应：根 -> 子 -> 孙
+	cancel()
+
+	// 等待一下让协程有机会打印退出日志（实际生产中通常配合 sync.WaitGroup）
+	time.Sleep(1 * time.Second)
+	fmt.Println("✅ [主程序] 结束")
+}
+```
+
+Go 要求开发者显式地在代码中通过 `select { case <-ctx.Done(): ... }` 来声明“这里可以安全地被取消”，更偏向于开发者显式地掌控协程的取消、异常处理，而非 Kotlin 协程那样自动的结构化并发。
+
 > [Goroutine退出机制](https://juejin.cn/post/7124500225997144078)
 
 # 并发竞争
