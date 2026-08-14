@@ -69,7 +69,7 @@ async Task UpdateUIAsync()
 }
 ```
 
-> 一般情况，SynchronizationContext.Current 都是 null，开发桌面程序时，`.NET`框架会自动创建并自动绑定到主线程
+> 一般情况，SynchronizationContext.Current 都是 null，开发桌面程序时，`.NET`框架会自动创建并自动绑定到主线程。在没有自动绑定的环境下，我们可以自定义实现 SynchronizationContext（重点是 Post 方法，确定如何调度任务），然后通过 `SynchronizationContext.SetSynchronizationContext`来设置
 
 ## Task
 主要是 `System.Threading.Tasks` 命名空间，但`System.Threading`命名空间中的一些API，也会用于`Task`，比如`AsyncLocal<T>`
@@ -468,11 +468,32 @@ public ValueTask<string> GetDataAsync(int id)
 > ValueTask 只能被 await 一次
 
 ### TaskScheduler
-* ThreadPoolTaskScheduler（默认）：将任务调度到线程池。
-* SynchronizationContextTaskScheduler：基于特定的 SynchronizationContext 调度任务（例如，调度到 UI 线程）。
+* TaskScheduler.Default：将任务调度到线程池。
+* TaskScheduler.Current：当前正在执行的 Task 所使用的 Scheduler。它不一定是线程池，也可能是 UI Scheduler 或自定义 Scheduler。
+* TaskScheduler.FromCurrentSynchronizationContext()：基于特定的 SynchronizationContext 调度任务（例如，调度到 UI 线程）。
 
-* Task.Run：使用默认线程池 
-* Task.Factory.StartNew：可指定任务执行线程
+> `Task.Run` 默认使用 `TaskScheduler.Default`。只有需要明确指定 Scheduler 或创建选项时，才使用 StartNew。
+
+```c#
+Result result = await Task.Factory.StartNew(
+    () => CalculateResult(),
+    cancellationToken,
+    TaskCreationOptions.DenyChildAttach,
+    TaskScheduler.Default); // 指定使用 TaskScheduler.Default
+```
+
+`SynchronizationContext.Current`是否存在的调度情况：
+```
+执行 await
+    ↓
+当前是否有有效的 SynchronizationContext？
+    ├─ 有：完成后投递回该上下文
+    └─ 没有：检查当前 TaskScheduler
+              ├─ 有自定义 Scheduler：使用它
+              └─ 否则：通常在线程池继续
+```
+
+> `SynchronizationContext` 的重点不是线程池调度，而是保留环境语义，比如用来回到 UI 主线程。`TaskScheduler` 则是 Task 调度抽象，负责具体的调度执行。通俗的说，SynchronizationContext 表示“我现在处于什么运行环境，以及如何回到这个环境”；TaskScheduler 表示“这个 Task 应该由谁、以什么策略执行”。
 
 ### ConfigureAwait
 `ConfigureAwait` 是 Task 和 ValueTask 上提供的一个方法，用于控制 await 一个 Task 完成后，代码应该在什么样的“上下文”中继续执行。
