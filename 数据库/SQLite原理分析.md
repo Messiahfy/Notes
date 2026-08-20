@@ -854,6 +854,8 @@ WAL（Write-Ahead Logging）模式大幅提升了并发能力：
 - **多个读并发**：依然支持多个读事务同时进行
 - **单个写事务**：写事务仍然是独占的
 
+> 「写事务阻塞其他读写事务」描述的是锁的互斥规则，要么立即报错，要么等待超时，完全由 busy_timeout 配置（默认不等待）决定。
+
 ### 多线程支持
 参考 [SQLite 线程安全文档](https://www.sqlite.org/threadsafe.html) ， SQLite 支持单线程、多线程、串行化三种线程模式
 
@@ -874,6 +876,22 @@ WAL（Write-Ahead Logging）模式大幅提升了并发能力：
 WAL 模式的锁同样是数据库级别，不过读和写可以并发，但写和写仍然不能并发。
 
 > Mysql 是 Client-Server 架构，设计目标是高并发、大数据量，所以支持了表或者行级别的锁粒度。
+
+### 并发的总结
+* 同一个 SQLite connection：多个线程对它的操作通常由 SQLite 内部 mutex 串行化，所以它们彼此不会作为两个 writer 去竞争数据库写锁。
+* 多个独立 SQLite connection：同时尝试写同一个数据库时，只能有一个 connection 成为 writer，其余 connection 必须等待或返回 SQLITE_BUSY。busy_timeout 可以让 SQLite 在很多锁竞争情况下等待并重试，超时后仍会报错；同进程和跨进程 connection 在 single-writer 规则上没有区别。
+
+> C 接口返回错误码 SQLITE_BUSY，Java 等语法则会转为异常抛出。
+
+
+#### Android Room 对并发的处理
+使用 Android Room 很少遇到 sqlite busy 异常，因为它在上层就做了并发的考虑：
+
+* Android Room 2.6 之前，有 queryExecutor（负责普通查询） 和 transactionExecutor（负责事务） 两个执行器，transactionExecutor 会串行执行事务，即使 Room 使用了 ConnectionPool，也可以在上层就保障了 Room 的事务串行化。
+
+* Android Room 2.7 为 KMP 和 SQLiteDriver 做了一次很大的底层重构，连接池中只有一个 writer connection，多个写请求竞争 Room 的 writer connection，而不是各拿一个写 connection 去 SQLite 层竞争。
+
+* 但 Room 的事务串行化，只能解决“同一个 RoomDatabase / Room connection pool 内部”的竞争。如果是多 RoomDatabase 实例或者多进程，还是会产生 busy 异常。
 
 ## 数据安全
 ### 事务模式
