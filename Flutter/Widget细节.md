@@ -7,10 +7,25 @@
 ## 2. 更新机制
 StatefulElement的child Element就是其State构造的Widget对应的Element，可以查看`updateChild`方法源码
 
+```dart
+// Element 的 updateChild 方法的部分简化逻辑如下
+
+if (child.widget == newWidget) {      // 同一个实例
+  if (child.slot != newSlot) updateSlotForChild(child, newSlot);
+  return child;                        // 直接返回，连 rebuild 都不做
+}
+if (Widget.canUpdate(child.widget, newWidget)) {
+  child.update(newWidget);  // 不同实例 → 复用 Element，执行 rebuild
+} else {
+  deactivateChild(child);
+  inflateWidget(newWidget, newSlot); // 无法复用，使用 newWidget 创建新的 Element
+}
+```
+
 1. if(child == null && newWidget != null)：根据Widget创建Element并mount
 2. if(child == null && newWidget == null)：不做处理
 3. if(child != null && newWidget == null)：deactiveChild，并detachRenderObject，添加Element到BuildOwner维护的_inactiveElementes中
-4. if(child != null && newWidget != null)：如果child.widget和newWidget相等则不处理，否则根据`Widget.canUpdate`判断是否需要更新，是则调用child.update(newWidget)，否则调用deactiveChild和inflateWidget完成Element的替换。
+4. if(child != null && newWidget != null)：如果child.widget和newWidget相等则不处理，否则根据`Widget.canUpdate`判断是否需要更新，是则调用child.update(newWidget)，会复用 Element 和 State，否则调用deactiveChild和inflateWidget创建新的Element替换。
 
 ## 3. 优化
 1. setState范围尽可能小，避免没必要的高层次开始遍历。因为state会调用Element的performRebuild，重新构造Widget，并调用updateChild，其中调用child.update，如果child Element是有child的Element类型，例如SingleChildRenderObjectWidget，则还回递归调用updateChild。所以从更高的层次调用setState会导致更多的更新遍历。
@@ -90,12 +105,16 @@ class RandomColor {
   }
 }
 ```
-点击按钮，交换两个widget的位置，会发现并没有变化。因为`Wdiget`只是UI的配置，`Element`才是核心的UI元素，在前文介绍的`StatefulElement`更新机制中可以了解到，如果`Widget`使用`Widget.canUpdate`判断相同（默认通过`runtimeType`和`key`判断），则不会做任何更新处理。刚好这里`_TestWidgetState`的`widgets`数组就是两个相同的`StatefulColor`，即使交换了对象的位置，`Widget.canUpdate`判断还是返回true，所以不会更新。
+点击按钮，交换两个widget的位置，会发现并没有变化。因为`Wdiget`只是UI的配置，`Element`才是核心的UI元素。根据前文介绍的更新机制，这里交换了两个widget，不是同一个实例，但使用`Widget.canUpdate`判断相同（默认通过`runtimeType`和`key`判断），所以会执行`child.update(newWidget)`，`StatefulElement`的 update 实现会触发 rebuild。关键是`StatefulElement`以及它的 `State` 对象都会被复用，所以 color 不会重新初始化，看起来也就不会更新。
+
+有几种解决方式：
+1. StatefulColor 的构造函数添加 color 参数，而不是放到 State。因为 setState 后，Widget 肯定会重新 build，state 对象就可以从widget中读取新的 color
+2. 使用 Key：这是最方便的方式，下面介绍它的用法。
 
 Flutter大多数时候不需要使用key，但如果增删或重新排序的情况就可能需要用到`key`，key用来让Element知道自己对应的Widget是哪个，比如两个equals的`StatefulWidget`子类对象换了位置，如果没有key区分，无法正确刷新Element的位置。
 
 所以把`_TestWidgetState`的`widgets`数组改为如下代码即可正常刷新交换后的位置：
-```
+```dart
   List<Widget> widgets = [
     StatefulColor(key: UniqueKey()),
     StatefulColor(key: UniqueKey()),
@@ -107,7 +126,7 @@ Flutter大多数时候不需要使用key，但如果增删或重新排序的情�
     * `UniqueKey`：每次构造都是唯一的对象，不会相同。不过这样做，每次rebuild重新构造 UniqueKey 都会和之前不同，也就可能丢失状态，除非把构造它的位置提升到rebuild之外。
         * 子类`PageStorageKey`：用于保存和恢复页面状态的key。滚动视图、PageView等在滑动位置变化后，会将滚动位置自动保存到`PageStorage`中，保存的数据会和`PageStorageKey`关联。
 * `GlobalKey`：`LocalKey`都是局部的，在当前层级找不到原本的key，就会重建新的Element。`Element.mount`的时候，会判断`widget.key`为`GlobalKey`类型时，将它保存到`BuildOwner`的`Map<GlobalKey, Element>`数据中，`GlobalKey`和它所在的`Element`关联，所以可以通过`GlobalKey`访问它对应的widget/element。并且即使层级变化，也能在rebuild时，根据`GlobalKey`找到原本关联的element复用，从而提升性能，也能保留Element中的状态（比如StatefulElement中的state）。可以查看`updateChild`源码，由于层级变化，widget不同，就会执行`inflateWidget`，如果是`GlobalKey`就会调用`_retakeInactiveElement`复用原本的element。
-```
+```dart
 final GlobalKey _globalKey= GlobalKey();
 
 @override
@@ -324,10 +343,32 @@ rebuild --> performRebuild --> updateChild --> update --> updateChildren（Multi
 * parentData有很多子类，用于各种场景的定制信息，可以查看 parentData 的继承关系结构
 
 ### 为什么需要 slot？
-#### 1. 性能优化
+Flutter 中有几种不同的树：Widget 描述配置，Element 管理节点身份和生命周期，RenderObject 负责布局与绘制。它们之间不是一一对应：像 `StatelessWidget`、`StatefulWidget` 产生的 Element 可以继续组织子节点，却不一定创建 RenderObject。
+
+所以，当一个 RenderObject 要进入 RenderObject 树时，框架需要知道它应该放在最近的 RenderObject 父节点的什么位置。这个位置由负责管理孩子的父级 Element 表达为 `slot`。`RenderObjectElement` 的插入、移动、删除钩子会收到这个值；如果现有子 Element 的 slot 变了，框架就能调用对应的移动逻辑。
+
+`slot` 的关键作用不是替所有父节点规定一种统一的子节点容器，而是给“父级决定位置、框架负责接入或移动 RenderObject”提供统一接口。具体的父级仍可以用自己的孩子模型和更新逻辑。
+
+| 情况 | 子 Element 的 slot 通常是什么 | 要注意的点 |
+|---|---|---|
+| Leaf RenderObject | 它自己仍可能有父级给的 slot | 它不创建子节点，因此没有子 slot |
+| Single child | `null` | 位置只有一个，不需要额外区分 |
+| 普通多子节点 | `IndexedSlot(index, previousElement)` | `index` 用来发现顺序变化；`previousElement` 帮助 RenderObject 链表定位 |
+| 具名子槽 | enum 或其他自定义值 | 父级按槽名解释位置 |
+| Sliver 懒构建子项 | 整数 index | 不是 `IndexedSlot` |
+| 二维视口子项 | `ChildVicinity(xIndex, yIndex)` | 表达二维位置，不是 `IndexedSlot` |
+
+> slot 只是一种设计选择，并非完全必须这样设计。
+
+> 以 Table 为例，slot 在 mount 时通过 attachRenderObject -- insertRenderObjectChild 传递信息，用于设置 child 的x和y坐标，其他也没什么用， RenderTable 内部仍然会使用 `List<List<RenderBox>>? children` 来存储每个 child。
+
+> MultiChildRenderObjectElement 则会在 mount 时传递 IndexedSlot，子类和相关的RenderObject都没有用它做什么，只是在 Element 的 updateChildren 方法中会将 IndexedSlot 作为默认 slot，如果子类里面没有使用就没什么用。
+
+#### 附带收益
+1. 性能优化
 * slot 让父 Element 能 `O(1)` 知道子 Element 的当前位置，无需每次遍历或构建映射。
 
-#### 2. 解耦位置与身份
+2. 解耦位置与身份
 * Key = “你是谁”
 * Slot = “你现在在哪”
 两者分离，设计更清晰

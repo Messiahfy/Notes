@@ -21,12 +21,12 @@ debug 模式的 dart 使用 JIT（即时编译），不会被提前编译成机�
 
 ----------
 ## FlutterApplication
-```
+```java
 //FlutterApplication#onCreate
 FlutterInjector.instance().flutterLoader().startInitialization(this);
 ```
 
-```
+```java
 public void startInitialization(@NonNull Context applicationContext) {
     this.startInitialization(applicationContext, new FlutterLoader.Settings());
 }
@@ -81,7 +81,7 @@ public void startInitialization(@NonNull Context applicationContext) {
 6. 获取app的相关目录
 
 以上几步除了`加载libflutter.so`，都比较明确，下面进一步看一下关于`加载libflutter.so`这一步的具体内容。在Java中使用`System.loadLibrary`加载动态链接库，库加载的时候会调用其中的`JNI_OnLoad`函数：
-```
+```cpp
 // https://github.com/flutter/engine/blob/master/shell/platform/android/library_loader.cc
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
@@ -107,7 +107,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 }
 ```
 第1步，实质就是把`JavaVM`指针保存下来：
-```
+```cpp
 // https://github.com/flutter/engine/blob/master/fml/platform/android/jni_util.cc
 
 void InitJavaVM(JavaVM* vm) {
@@ -118,7 +118,7 @@ void InitJavaVM(JavaVM* vm) {
 第2步调用`AttachCurrentThread`，得到`JNIEnv`指针。平时在C/C++中写好了Java中native方法对应的函数，从Java调用，那么执行到C/C++中的该方法也是和Java中调用者在同一线程，因为Java的线程本就是JVM对Native线程的包装。而当前情况并不是从我们的Java代码调用C/C++中的对应函数，而是JVM加载动态链接库的回调。所以需要自己通过`JavaVM`指针attch当前线程，得到`JNIEnv`指针。
 
 第3步，注册FlutterMain：
-```
+```cpp
 // https://github.com/flutter/engine/blob/master/shell/platform/android/flutter_main.cc
 
 bool FlutterMain::Register(JNIEnv* env) {
@@ -149,7 +149,7 @@ bool FlutterMain::Register(JNIEnv* env) {
 第3步就是动态注册了`nativeInit`和`nativePrefetchDefaultFontManager`两个JNI函数
 
 第4步，注册 PlatformView：
-```
+```cpp
 // https://github.com/flutter/engine/blob/master/shell/platform/android/platform_view_android_jni_impl.cc
 
 bool PlatformViewAndroid::Register(JNIEnv* env) {
@@ -159,7 +159,7 @@ bool PlatformViewAndroid::Register(JNIEnv* env) {
 这一步的内容较多，但基本是相似的。通过`FindClass`来获取Java中的类 `ScopedJavaGlobalRef`和`GetMethodID`获取Java中的方法，用于c++调用java。通过`RegisterApi`注册native方法，用于java调用c++。内容和SurfaceTexture相关。
 
 第5步，注册 VSyncWaiter.
-```
+```cpp
 // https://github.com/flutter/engine/blob/master/shell/platform/android/vsync_waiter_android.cc
 
 bool VsyncWaiterAndroid::Register(JNIEnv* env) {
@@ -191,7 +191,7 @@ bool VsyncWaiterAndroid::Register(JNIEnv* env) {
 
 ## FlutterActivity
 FlutterApplication的部分看完后，下面执行到FlutterActivity的启动过程，首先是onCreate：
-```
+```java
 // FlutterActivity#onCreate
 
 protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -208,7 +208,7 @@ protected void onCreate(@Nullable Bundle savedInstanceState) {
 }
 ```
 先看第一步，`delegate.onAttach`：
-```
+```java
 void onAttach(@NonNull Context context) {
     this.ensureAlive();
     if (this.flutterEngine == null) {
@@ -229,7 +229,7 @@ void onAttach(@NonNull Context context) {
 ```
 
 重点看一下创建flutter engine：
-```
+```java
 void setupFlutterEngine() {
     String cachedEngineId = this.host.getCachedEngineId();
     // 如果flutterEngine有缓存，就从缓存中取
@@ -255,7 +255,7 @@ void setupFlutterEngine() {
 默认情况，就是上面最后的分支，新建`FlutterEngine`实例，内部会创建Dart执行环境，各种Channel，例如PlatformChannel。然后执行`flutterLoader.ensureInitializationComplete`，其中会执行`FlutterJNI.nativeInit`，暂不继续分析内部功能。
 
 然后看`delegate.onActivityCreated`:
-```
+```java
 void onActivityCreated(@Nullable Bundle bundle) {
     Log.v("FlutterActivityAndFragmentDelegate", "onActivityCreated. Giving framework and plugins an opportunity to restore state");
     this.ensureAlive();
@@ -276,7 +276,7 @@ void onActivityCreated(@Nullable Bundle bundle) {
 这里的主要功能就是通过bundle恢复一些状态
 
 最后看到`setContentView`中传入的View是通过FlutterActivity的`createFlutterView()`创建，然后调用`delegate.onCreateView`：
-```
+```java
 @NonNull
 View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
     Log.v("FlutterActivityAndFragmentDelegate", "Creating FlutterView.");
@@ -315,7 +315,7 @@ View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nulla
 `FlutterSplashView`在`FlutterView`首帧绘制前，会先显示`SplashScreen`，`SplashScreen`在`FlutterActivity`的`provideSplashScreen`方法中提供，默认使用`AndroidManifest`文件中的配置，也可以重写方法自定义。
 
 然后分析`FlutterActivity`的`onStart`，它会调用`delegate.onStart`：
-```
+```java
 void onStart() {
     Log.v("FlutterActivityAndFragmentDelegate", "onStart()");
     this.ensureAlive();
@@ -324,7 +324,7 @@ void onStart() {
 ```
 
 继续执行`doInitialFlutterViewRun`，首次开始在FlutterView中运行Dart：
-```
+```java
 private void doInitialFlutterViewRun() {
     if (this.host.getCachedEngineId() == null) {
         if (!this.flutterEngine.getDartExecutor().isExecutingDart()) {

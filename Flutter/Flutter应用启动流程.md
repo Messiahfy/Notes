@@ -3,7 +3,7 @@
 
 ## 代码分析
 `main`方法会调用`runApp`，传入根widget，根widget会强制铺满屏幕：
-```
+```dart
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
 ```
 
 `runApp`方法如下：
-```
+```dart
 void runApp(Widget app) {
   WidgetsFlutterBinding.ensureInitialized()
     ..scheduleAttachRootWidget(app)
@@ -28,7 +28,7 @@ void runApp(Widget app) {
 
 ### 1. ensureInitialized
 首先执行`WidgetsFlutterBinding`的`ensureInitialized`方法：
-```
+```dart
 class WidgetsFlutterBinding extends BindingBase with GestureBinding, SchedulerBinding, ServicesBinding, PaintingBinding, SemanticsBinding, RendererBinding, WidgetsBinding {
   static WidgetsBinding ensureInitialized() {
     if (WidgetsBinding.instance == null)
@@ -38,7 +38,7 @@ class WidgetsFlutterBinding extends BindingBase with GestureBinding, SchedulerBi
 }
 ```
 这里就是简单调用了`WidgetsBinding`的构造函数，但是重要的是，`WidgetsFlutterBinding`继承了`BindingBase`，并且使用`with`混入多个`mixin`类型的Binding类。这里会先调用父类BindingBase的构造函数：
-```
+```dart
 BindingBase() {
   //...
   initInstances();
@@ -52,7 +52,7 @@ BindingBase() {
 那么在这里，会执行最后也就是`WidgetsBinding`的`initInstances()`，但是其中又会先执行`super.initInstances()`，并且前面的每个类也是如此，所以最终又变为从`GestureBinding`的`initInstances()`开始执行。
 
 第一个是`GestureBinding`
-```
+```dart
 void initInstances() {
   super.initInstances(); // BindingBase的initInstances()只是执行断言，可忽略
   _instance = this;
@@ -62,7 +62,7 @@ void initInstances() {
 主要就是给`window`设置手势事件的回调
 
 第二个是`SchedulerBinding`
-```
+```dart
 void initInstances() {
   super.initInstances();
   _instance = this;
@@ -81,7 +81,7 @@ void initInstances() {
 运行帧绘制相关回调的调度者，比如动画就会用到它
 
 第三个是`ServicesBinding`
-```
+```dart
 void initInstances() {
   super.initInstances();
   _instance = this;
@@ -97,7 +97,7 @@ void initInstances() {
 设置Platform Message相关的监听和处理
 
 第四个是`PaintingBinding`
-```
+```dart
 void initInstances() {
   super.initInstances();
   _instance = this;
@@ -108,7 +108,7 @@ void initInstances() {
 创建图片缓存
 
 第五个是`SemanticsBinding`
-```
+```dart
 void initInstances() {
   super.initInstances();
   _instance = this;
@@ -118,7 +118,7 @@ void initInstances() {
 辅助功能相关
 
 第六个是`RendererBinding`
-```
+```dart
 void initInstances() {
   super.initInstances();
   _instance = this;
@@ -150,7 +150,7 @@ void initInstances() {
 4. 向添加`SchedulerBinding`的`_persistentCallbacks`中添加回调，回调内容为执行渲染流水线
 
 第七个是`WidgetsBinding`
-```
+```dart
 void initInstances() {
   super.initInstances();
   _instance = this;
@@ -177,7 +177,7 @@ void initInstances() {
 
 ### 2. scheduleAttachRootWidget
 `runApp`函数中，执行的第二步就是`scheduleAttachRootWidget`
-```
+```dart
 void scheduleAttachRootWidget(Widget rootWidget) {
   Timer.run(() {
     attachRootWidget(rootWidget);
@@ -185,7 +185,7 @@ void scheduleAttachRootWidget(Widget rootWidget) {
 }
 ```
 将调度到下一个消息循环中去执行`attachRootWidget`
-```
+```dart
 void attachRootWidget(Widget rootWidget) {
   _readyToProduceFrames = true;
   _renderViewElement = RenderObjectToWidgetAdapter<RenderBox>(
@@ -200,7 +200,7 @@ void attachRootWidget(Widget rootWidget) {
 **`WidgetsBinding`将持有`renderViewElement`，并且关联了`RendererBinding`中创建的`RenderView`**
 
 我们先来看`RenderObjectToWidgetAdapter`
-```
+```dart
 class RenderObjectToWidgetAdapter<T extends RenderObject> extends RenderObjectWidget {
   RenderObjectToWidgetAdapter({
     this.child,
@@ -250,7 +250,7 @@ Widget和Element树是一一对应的，但RenderObject树则只有实际需要�
 ### 3. scheduleWarmUpFrame
 然后到最后一步，将调度执行渲染
 
-```
+```dart
 void scheduleWarmUpFrame() {
   if (_warmUpFrame || schedulerPhase != SchedulerPhase.idle)
     return;
@@ -281,7 +281,7 @@ void scheduleWarmUpFrame() {
 `handleBeginFrame`会执行`_transientCallbacks`中的回调函数，动画中的`Ticker`就会给`_transientCallbacks`中设置回调函数
 
 `handleDrawFrame`如下：
-```
+```dart
 void handleDrawFrame() {
   assert(_schedulerPhase == SchedulerPhase.midFrameMicrotasks);
   Timeline.finishSync(); // end the "Animate" phase
@@ -307,7 +307,7 @@ void handleDrawFrame() {
 }
 ```
 在前面分析的`RendererBinding`的`initInstances`函数中，已经向`_persistentCallbacks`中添加了`_handlePersistentFrameCallback`函数，现在就会执行该函数：
-```
+```dart
 // RendererBinding
 
 void _handlePersistentFrameCallback(Duration timeStamp) {
@@ -330,7 +330,7 @@ void drawFrame() {
 `drawFrame()`函数是关键，它将完成整个渲染流水线。接下来我们对这里面的几步做分析：
 
 首先看`pipelineOwner.flushLayout()`：
-```
+```dart
   void flushLayout() {
     //...
     try {
@@ -350,7 +350,7 @@ void drawFrame() {
   }
 ```
 在`RendererBinding`的`initInstances`方法中，会调用`initRenderView`，其中会把`RenderView`添加到`_nodesNeedingLayout`列表中。初始应该只有`RenderView`在列表中。
-```
+```dart
   void _layoutWithoutResize() {
     //...
     try {
@@ -370,7 +370,7 @@ void drawFrame() {
 第二步是`pipelineOwner.flushCompositingBits()`，刷新合成标志，不了解这部分，略过
 
 第三步是`pipelineOwner.flushPaint()`
-```
+```dart
   void flushPaint() {
     //...
     try {
@@ -394,7 +394,7 @@ void drawFrame() {
   }
 ```
 对于需要绘制的`RenderObject`，会调用`repaintCompositedChild`，其中会调用到`RenderObject`的`_paintWithContext`函数：
-```
+```dart
 void _paintWithContext(PaintingContext context, Offset offset) {
   if (_needsLayout)
     return;
