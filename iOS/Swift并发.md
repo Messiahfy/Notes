@@ -34,7 +34,7 @@ GCD的核心是`DispatchQueue`，它是任务的容器，通过它来执行任�
 
 2. 创建任务
 创建任务有两种常用方式：
-```
+```swift
 // 1. 创建 DispatchWorkItem
 let workItem = DispatchWorkItem() {
     // ......
@@ -50,7 +50,7 @@ dispatchQueue.async {
 ```
 
 ### 串行队列
-```
+```swift
 // 当前在主线程开始执行：
 
 // 默认为串行队列
@@ -87,7 +87,7 @@ print("444")
 > sync会阻塞当前线程，正常情况不应该在主线程调用
 
 ### 并行队列
-```
+```swift
 // 并行队列
 let concurrentQueue = DispatchQueue(label: "concurrentQueue", attributes: .concurrent)
 
@@ -170,7 +170,7 @@ GCD 使用服务质量（Quality of Service, QoS）控制任务优先级：
 > `DispatchWorkItemFlags`是`OptionSet`类型，所以可以组合使用，比如`[.detached, .barrier]`
 
 ### barrier
-```
+```swift
 // 并行队列
 let concurrentQueue = DispatchQueue(label: "concurrentDemo", attributes: .concurrent)
 
@@ -211,7 +211,7 @@ for _ in 0..<3 {
 
 ### detached、assignCurrentContext、noQoS、inheritQoS、enforceQoS
 官方文档对于这几个标志的解释都比较模糊，这里直接测试效果对比一下：
-```
+```swift
 class ViewController: UIViewController {
 
     override func viewDidLoad() {
@@ -286,7 +286,7 @@ test2 - detached: QoS = Optional(Dispatch.DispatchQoS.QoSClass.background)
 测试函数使用了嵌套的任务队列来测试各种标志的影响，`test1`的情况是内层队列未指定QoS，只有`detached`和`noQoS`，其他都受到外层队列的QoS影响；`test2`的情况则是内层队列指定了QoS，此时只有`enforceQoS`会使用一个不低于当前任务的QoS属性，其他都直接使用了内层队列设置的QoS属性。
 
 除了队列可以设置`QoS`属性，任务也可以设置`QoS`属性，在使用了`enforceQoS`标志，会强制使用设置的QoS属性，而不受队列影响：
-```
+```swift
 func testQoS(fromQueue: DispatchQueue, toQueue: DispatchQueue, label: String) {
     fromQueue.async {
             
@@ -349,7 +349,7 @@ DispatchGroup 用于协调一组任务，等待所有任务完成后再执行后
 
 
 比如并行执行多个网络请求的场景，使用方式如下：
-```
+```swift
 let group = DispatchGroup()
 let queue = DispatchQueue.global(qos: .userInitiated)
 
@@ -383,7 +383,7 @@ print("所有网络请求完成，更新 UI")
 
 ## DispatchSemaphore 信号量
 DispatchSemaphore 控制并发访问，限制同时运行的任务数量。
-```
+```swift
 let semaphore = DispatchSemaphore(value: 2) // 允许 2 个并发任务
 let queue = DispatchQueue.global()
 
@@ -424,7 +424,7 @@ DispatchSource 支持以下几种事件类型：
 7. User Data：自定义事件，用于手动触发事件（如通过 mergeData）。
 
 比如**文件系统监控**：
-```
+```swift
 let filePath = "/path/to/file.txt"
 let descriptor = open(filePath, O_EVTONLY) // 打开文件描述符
 guard descriptor >= 0 else { return }
@@ -458,7 +458,7 @@ https://developer.apple.com/documentation/foundation/operation/
 
 通过`maxConcurrentOperationCount`控制串行或并行
 
-```
+```swift
 // 1. 创建OperationQueue（相当于GCD的队列）
 let operationQueue = OperationQueue()
 
@@ -546,7 +546,7 @@ Swift 5.5 引入了 Async/Await 特性，也就是 Swift 协程，这是更现�
 1. 编写一个`async`函数
 
 模拟网络请求延迟1秒后返回字符串结果，将回调函数包装为了一个`async`函数，这里的重点是调用了`withCheckedContinuation`函数，它和Kotlin中的`suspendCoroutine`函数类似，都是提供了`continuation`。
-```
+```swift
 func networkRequest(key: Int) async -> String {
     await withCheckedContinuation { continuation in
         DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
@@ -557,7 +557,7 @@ func networkRequest(key: Int) async -> String {
 ```
 
 `withCheckedContinuation`函数声明如下：
-```
+```swift
 public func withCheckedContinuation<T>(
     isolation: isolated (any Actor)? = #isolation,
     function: String = #function,
@@ -566,7 +566,7 @@ public func withCheckedContinuation<T>(
 ```
 
 `CheckedContinuation`结构体的声明如下：
-```
+```swift
 public struct CheckedContinuation<T, E> : Sendable where E : Error {
 
     public init(continuation: UnsafeContinuation<T, E>, function: String = #function)
@@ -582,14 +582,14 @@ public struct CheckedContinuation<T, E> : Sendable where E : Error {
 和Kotlin协程一样，异步函数需要在另一个异步函数中调用，但总归有一个初始调用点，Kotlin的挂起函数初始调用点是协程作用域，而Swift的初始调用点则是`Task`.
 
 `Task`的常用构造函数如下，可以传入一个异步闭包：
-```
+```swift
 public init(priority: TaskPriority? = nil, operation: sending @escaping @isolated(any) () async -> Success)
 
 public init(priority: TaskPriority? = nil, operation: sending @escaping @isolated(any) () async throws -> Success)
 ```
 
 所以可以这样调用异步函数：
-```
+```swift
 Task {
     let result = await networkRequest(1)
     print("结果为 \(result)")
@@ -598,12 +598,12 @@ Task {
 
 3. 获取`Task`的结果（可选）
 `Task`的闭包返回值会作为`Task`的返回值，并且由于`Task`是异步执行的，所以它的结果也是异步的。
-```
+```swift
 public var value: Success { get async }
 ```
 
 所以要获取结果，也要在另一个异步函数或者`Task`中执行：
-```
+```swift
 // 一个实际不太会这样用的例子，只是展示用法
 Task {
     let result = await Task {
@@ -620,7 +620,7 @@ Task {
 1. 创建TaskGroup
 
 `withTaskGroup`是一个`async`函数，它会在 TaskGroup 内所有的子 Task 执行完之后再返回。
-```
+```swift
 @inlinable public func withTaskGroup<ChildTaskResult, GroupResult>(
     of childTaskResultType: ChildTaskResult.Type = ChildTaskResult.self, 
     returning returnType: GroupResult.Type = GroupResult.self, 
@@ -637,7 +637,7 @@ Task {
 
 2. 添加子任务并且获取结果
 `TaskGroup`提供了`addTask`方法用于添加子任务，并且可以通过`for await`遍历获取结果。
-```
+```swift
 Task {
     await withTaskGroup(of: String.self) { group in
         // 添加任务到组
@@ -657,7 +657,7 @@ Task {
 > 还有一个`addTaskUnlessCancelled`方法，它会在`TaskGroup`未被取消的状态下添加任务，如果已取消则不会添加。
 
 `TaskGroup`是`AsyncSequence`的子类，所以可以通过`for await`来遍历结果，并且还有`filter`、`map`、`next`等遍历方法可以使用。
-```
+```swift
 extension TaskGroup : AsyncSequence {
     // ...
 }
@@ -672,7 +672,7 @@ extension TaskGroup : AsyncSequence {
 
 ## 非结构化并发
 通过`Task`的构造器或者`detach`函数创建的`Task`实例都是顶级的，多个`Task`之间不会形成任务树，不会自动传递取消和异常，也就是非结构化的。
-```
+```swift
 // 🚫并不是结构化并发
 Task {
     Task {
@@ -691,7 +691,7 @@ Task {
 
 1. `async let`
 前面展示调用都是直接对`async`函数使用了`await`，这就相当于挂起等待顺序执行了，这和Kotlin中调用挂起函数的默认效果一样。如果想要并发执行，可以使用`async let`和`await`结合`数组`或者`元组`等待多个异步任务并发执行：
-```
+```swift
 Task {
     do {
         async let result1 = networkRequest(key: 1)
@@ -728,7 +728,7 @@ let (a, b) = await (networkRequest(key: 1), networkRequest(key: 2)) // 🚫 顺�
 ###  `Task.isCancelled`
 
 `Task.isCancelled`是一个只读属性，用于检查当前任务是否已被取消。用法示例：
-```
+```swift
 let task = Task {
     for key in 1...3 {
         // 每次循环时，检测取消状态，如果已经取消就结束循环
@@ -757,7 +757,7 @@ Task {
 使用`Task.isCancelled`或者`Task.checkCancellation()`都是主动检测是否已经取消，但有些场景更适合注册回调被动接收取消通知。
 
 比如这个异步函数，使用`withTaskCancellationHandler`注册取消回调，收到取消回调时会取消gcd的异步任务，并且使用`continuation.resume`传递回一个`CancellationError()`。
-```
+```swift
 func cancelableThrowNetworkRequest(key: Int) async throws -> String {
     var block: DispatchWorkItem? = nil
     var continuation: CheckedContinuation<String, Error>? = nil
@@ -780,7 +780,7 @@ func cancelableThrowNetworkRequest(key: Int) async throws -> String {
 使用`withTaskCancellationHandler`有个需要注意的地方：**`onCancel`取消回调的情况，也需要调用`continuation.resume`，否则异步函数会一直挂起不返回（Kotlin协程中取消回调情况可以不用手动resume，但Swift需要手动处理）。**
 
 或者可以像这个例子，虽然`onCancel`中没有调用`continuation.resume`，但`onCancel`中调用`urlSessionTask?.cancel()`会触发回调error，在`URLSession.shared.dataTask`的回调中就会在取消的情况下执行`continuation.resume(throwing: error)`。
-```
+```swift
 func download(url: URL) async throws -> Data? {
   var urlSessionTask: URLSessionTask?
 
@@ -809,7 +809,7 @@ func download(url: URL) async throws -> Data? {
 在异步函数中抛出异常，如果没有被catch住，异常抛出到了顶级Task，则这个顶级Task会取消它内部的全部child Task，`async let`和`TaskGroup`这两种结构化并发的场景的异常处理都是如此。
 
 来看一个使用`async let`结构化并发中抛出异常的例子：
-```
+```swift
 // 异步函数，1秒后抛出异常
 func asyncThrowError() async throws -> String {
     print("asyncThrowError 开始")
@@ -821,7 +821,7 @@ func asyncThrowError() async throws -> String {
     }
 }
 
-// 异常函数，2秒后返回结果
+// 异步函数，2秒后返回结果
 func cancelableAsyncRequest() async throws -> String {
     print("cancelableAsyncRequest 开始")
     var block: DispatchWorkItem? = nil
@@ -867,7 +867,7 @@ task结果： failure(Swift.CancellationError())   isCancelled: false
 `asyncThrowError()`执行1秒后抛出异常，顶级Task收到异常后会取消全部子任务，所以`cancelableAsyncRequest()`这个子任务会收到取消回调，从而提前结束。
 
 不过这里需要注意的是，`async let`并发场景，`await`的顺序对异常处理有影响：**Task会收到正在await的子任务抛出的异常，然后取消全部子任务（其他还没有await的子任务）**，所以如果把上面例子中`await (x, y)`改为`await (y, x)`，则`cancelableAsyncRequest()`不会收到取消回调，也就不会提前结束。不过最终Task的result还是会收到异常，但无法及时取消子任务。
-```
+```swift
 let task = Task {
     async let x = asyncThrowError()
     async let y = cancelableAsyncRequest()
@@ -893,7 +893,7 @@ task结果： failure(Swift.CancellationError())   false
 **如果想要避免`await`顺序对异常处理流程的影响，可以使用`TaskGroup`来并发执行，`TaskGroup`收到子任务的异常会自动取消所有子任务，不受`await`顺序影响**
 
 TaskGroup方式的代码：
-```
+```swift
 let task = Task {
     try await withThrowingTaskGroup(of: String.self) { group in
         group.addTask {
@@ -933,7 +933,7 @@ task结果： failure(Swift.CancellationError())   false
 
 ## 任务树
 结构化并发形成的任务树，可以通过`withUnsafeCurrentTask`函数打印验证：
-```
+```swift
 withUnsafeCurrentTask { task in
     // 打印当前 Task 的 hashValue
     print("CurrentTask \(task?.hashValue)")
@@ -941,7 +941,7 @@ withUnsafeCurrentTask { task in
 ```
 
 以如下代码为例，我们可以验证确认有5个 Task：
-```
+```swift
 func asyncRequest() async throws -> String {
     // ......
 }
@@ -981,7 +981,7 @@ Task { // 顶级Task
 在任务树的情况下，在`withTaskCancellationHandler`的`onCancel`回调中，得到的当前Task并不是当前异步函数的Task，假设上面例子的`asyncRequest()`内注册了取消，对于上面`child task 1`的异步函数中回调`onCancel`闭包内的当前Task为顶级Task，对于`child task 3`的`onCancel`闭包内则是`child task 2`也就是TaskGroup。使用`Task.isCancelled`也是获取当前Task来判断，所以也符合这个情况。
 
 如下两个代码位置打印当前Task的hashValue，在作为child task的情况下，打印是不一样的，位置1才是真正的当前Task。
-```
+```swift
 func cancelableAsyncRequest() async throws -> String {
     // 代码位置1
     withUnsafeCurrentTask { task in
@@ -1005,7 +1005,7 @@ func cancelableAsyncRequest() async throws -> String {
 `Sendable`是一个标记型的协议，不需要实现任何属性和方法，它用于描述可以安全共享的类型，在跨并发域传输时不会引发数据竞争问题。比如使用Task、async/await并发编程时，编译器会检测符合`Sendable`的类型，才能在并发域之间安全地传输。
 
 例如这个代码会报错：
-```
+```swift
 class MyClass {
     init(count: Int = 0) {
         self.count = count
@@ -1032,7 +1032,7 @@ func exampleFunc() async {
 5. 可变的自定义引用类型，如果自己通过锁或其他机制来确保线程安全，也可以标记为`Sendable`，但此时编译器仍然会报错，所以需要加上`@unchecked`。
 
 泛型类型要隐式遵循`Sendable`，需要它内部的元素符合`Sendable`，比如：
-```
+```swift
 struct X<T: Sendable> {  // 隐式自动符合Sendable
   var value: T
 }
@@ -1048,7 +1048,7 @@ struct Y<T> {    // 不能隐式自动符合Sendable，因为 T 不遵循 Sendab
 https://github.com/swiftlang/swift/blob/main/stdlib/public/core/IntegerTypes.swift.gyb
 
 ### 一些Sendable的情况
-```
+```swift
 ✅ 符合Sendable，不显式标记也会自动符合Sendable
 enum Repeness: Sendable {
     case hard
@@ -1084,7 +1084,7 @@ struct Coop: Sendable {
 ```
 
 要符合Sendable，就要求它内部的所有属性/元素都是符合`Sendable`的，这里`name`是String类型，符合`Sendable`，所以State枚举类型也符合`Sendable`。
-```
+```swift
 enum State: Sendable {
     case loggedOut
     case loggedIn(name: String)
@@ -1100,7 +1100,7 @@ enum State: Sendable {
 3. 没有父类，或者父类是`NSObject`
 
 比如这个类可以符合`Sendable`：
-```
+```swift
 final class MyClass: Sendable {
     init(count: Int = 0) {
         self.count = count
@@ -1110,7 +1110,7 @@ final class MyClass: Sendable {
 ```
 
 但如果类中确实需要有可变属性，可以使用`@unchecked`结合`Sendable`，此时编译器不会检查，所以需要开发者自行通过锁、队列等机制保证线程安全。当类型不能符合`Sendable`，但你确信你的实现是线程安全的，`@unchecked`属性非常有用，比如：
-```
+```swift
 final class MyClass: @unchecked Sendable {
     private var value: Int = 0
     // 使用串行队列保证线程安全
@@ -1132,7 +1132,7 @@ final class MyClass: @unchecked Sendable {
 `Sendable`协议在语法上只能用于类型声明，对于函数和闭包，则可以使用`@Sendable`属性（Swift 5 添加）或者`sending`（Swift 6 添加）。
 
 我们看一下`Task.init`函数的声明：
-```
+```swift
 // Swift 5 使用 @Sendable
 public init(
   priority: TaskPriority? = nil,
@@ -1150,7 +1150,7 @@ public init(
 首先了解一下`@Sendable`，使用`@Sendable`属性修饰的闭包，意味着该闭包中捕获的任何值的类型都需要是`Sendable`，这样才可以安全地跨并发边界传递和调用该闭包。
 
 由于Task的init函数源码已经改为使用`sending`，即使把 Xcode 16 的 Swift 6 编译器设置为 Swift 5 模式，也仍然会使用`sending`的版本，所以要测试`@Sendable`的效果，我们可以自定义一个使用`@Sendable`的函数来测试。
-```
+```swift
 public func sendableClosure(
     operation: @Sendable () -> Void
 ) {
@@ -1165,7 +1165,7 @@ class MyClass {
 func test() {
     let isNotSendable = MyClass()
     sendableClosure {
-        // Capture of 'isNotSendable' with non-sendable type 'MyClass' in a `@Sendable` closure
+        // ❌ Capture of 'isNotSendable' with non-sendable type 'MyClass' in a `@Sendable` closure
         isNotSendable.value += 1
     }
 }
@@ -1174,7 +1174,7 @@ func test() {
 
 ### sending的使用
 最新的`Task.init`的闭包已经改为使用`sending`，所以我们验证`sending`的效果可以直接使用`Task.init`。
-```
+```swift
 func test() {
     let isNotSendable = MyClass()
     Task {
@@ -1185,7 +1185,7 @@ func test() {
 虽然仍然是使用不符合`@Sendable`的类型，但此时不会报错了，因为在 Swift 6 中添加的`sending`允许捕获不符合`Sendable`的值，只要在捕获后不再在其他地方访问它。**毕竟不再在其他地方使用，也就不会有并发安全问题了**
 
 所以假如其他地方使用就会报错了：
-```
+```swift
 func test() {
     let isNotSendable = MyClass()
     Task {
@@ -1205,7 +1205,7 @@ func test() {
 2. `@Sendable`标记的函数/闭包只能使用按值捕获，`let`引入的不可变值的捕获是隐式的按值捕获，任何其他捕获都必须通过捕获列表指定
 
 第2点可以通过如下代码验证：
-```
+```swift
 func test() {
     // 这里使用 var 而不是 let
     var isSendable = MyClass()
@@ -1223,7 +1223,7 @@ func test() {
 ```
 
 `sending`标记的闭包参数同样也要求按值捕获：
-```
+```swift
 func test1() {
     var isNotSendable: MyClass? = MyClass()
     Task { [isNotSendable] in // ⚠️ 如果不显式使用捕获列表按值捕获，则无法使用 var 可变变量
@@ -1239,7 +1239,7 @@ func test1() {
 * `sending`：用于参数和返回值。自动推导捕获是否安全（非Sendable值没有在其他地方访问也可以），并且要求**非Sendable的值**的所有权转移，其他地方不能再访问
 
 **只能使用`@Sendable`的情况：**
-```
+```swift
 // 只能用 @Sendable
 typealias MyClosure = @Sendable () -> Void
 
@@ -1253,7 +1253,7 @@ struct MyStruct: Sendable {
 ```
 
 **只能使用`sending的情况**
-```
+```swift
 // 只能使用 sending
 func sendingFunc(data: sending MyClass) {
 
@@ -1261,7 +1261,7 @@ func sendingFunc(data: sending MyClass) {
 ```
 
 **`@Sendable`和`sending`都可以使用的情况：**
-```
+```swift
 // 可以用 sending
 func runInBackground(_ work: sending @escaping () -> Void) {
     Task { work() }
@@ -1281,7 +1281,7 @@ Actor是一种并发模型，它的核心思想是独立维护隔离（isolated�
 actor 确保其内部状态只能被一个任务（线程）一次访问，从而消除数据竞争。传统的并发工具（如锁、信号量）使用复杂且容易出错，actor 提供了一种更高层次的抽象，简化了并发编程。
 
 在前面介绍`Sendable`时，如果有可变属性的Class要满足`Sendable`协议，就需要使用`@unchecked`忽略检查，并且自行保证线程安全。但如果每个都要这样改写，还是有点麻烦的，此时就可以使用Swift提供的`actor`来声明一个引用类型：
-```
+```swift
 actor Counter {
     var value = 0
     func increment() { value += 1 }
@@ -1289,12 +1289,12 @@ actor Counter {
 ```
 
 编译器会自动对其处理，让它符合actor模型（估计本质还是类，只不过添加了消息队列并发保护等机制）。用`actor`声明的引用类型都会隐式符合`Actor`协议，自然也就符合`Sendable`协议：
-```
+```swift
 protocol Actor : AnyObject, Sendable
 ```
 
 `actor`类型可以安全地跨并发域使用，但访问时需要使用`await`关键字，`await`会让访问变为通过消息队列异步执行。
-```
+```swift
 func test() {
     let counter = Counter()
 
@@ -1306,7 +1306,7 @@ func test() {
 
 ### isolated
 假设我们有一个使用`actor`编写的银行账户类型：
-```
+```swift
 actor BankAccount {
     enum BankError: Error {
         case insufficientFunds
@@ -1344,7 +1344,7 @@ extension BankAccount {
 这里的`transfer`方法直接访问了另一个`BankAccount`的`balance`属性，这是不允许的，因为`actor`的隔离状态只允许在actor内部访问，不能在其他地方访问。
 
 此时我们可以不直接访问`balance`，而是调用它的`deposit`方法，在其中修改`balance`属性，不过此时需要添加`await`才能访问，所以`transfer`方法也需要显式加上`async`：
-```
+```swift
 func transfer(amount: Double, to other: BankAccount) async throws {
     try withdraw(amount: amount)
     await other.deposit(amount: amount)
@@ -1354,7 +1354,7 @@ func transfer(amount: Double, to other: BankAccount) async throws {
 
 
 我们还可以使用`isolated`标记方法中的Actor类型的参数，使当前方法变为该Actor类型参数的隔离域，在方法内就可以直接访问该参数的属性了，并且不需要`await`：
-```
+```swift
 func transfer(amount: Double, to other: isolated BankAccount) async throws {
     try await withdraw(amount: amount)
     other.balance = other.balance + amount
@@ -1400,7 +1400,7 @@ actor Bar {
 #### 通过`isolated`减少await
 使用`isolated`可以在方法内部不使用`await`，只需要外部调用方法时使用一次`await`即可，
 
-```
+```swift
 actor Counter {
     private var count = 0
 
@@ -1433,7 +1433,7 @@ func test() {
 
 ### nonisolated
 如果某些方法不需要隔离保护，比如并不涉及 actor 的状态，可以标记为 `nonisolated`，这样它们就不受隔离约束，可以直接同步调用，不需要 `await`。这样也可以提高性能，避免不必要的隔离域切换。
-```
+```swift
 actor BankAccount {
 
     let accountNumber: String
@@ -1454,7 +1454,7 @@ func test() {
 
 ## 线程调度
 前面介绍`Task.init`方法时，没有涉及另一个重载函数，它提供了`executorPreference`参数，允许我们指定一个`TaskExecutor`线程调度器：
-```
+```swift
 init(
     executorPreference taskExecutor: consuming (any TaskExecutor)?,
     priority: TaskPriority? = nil,

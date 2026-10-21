@@ -34,7 +34,7 @@ Java语言规范：https://docs.oracle.com/javase/specs/jls/se11/html/index.html
 Java虚拟机规范：https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-4.html#jvms-4.1
 
 class文件格式使用一个类似C语言的伪结构表示如下：
-```
+```c
 ClassFile {
     u4             magic;
     u2             minor_version;
@@ -56,13 +56,51 @@ ClassFile {
 ```
 > u1、u2、u4 分别表示无符号的一字节、两字节或四字节数量。
 
-* magic（魔数）：唯一作用是确定这个文件是否为一个能被虚拟机接收的 Class 文件，值为0xCAFEBABE
-* minor_version（次要版本）,major_version（主要版本）
-* constant_pool_count：常量池数量，constant_pool：常量池数组。常量池中包含引用的各种字符串常量、类和接口名称、字段名称和其他被ClassFile结构引用的常量（比如方法名）。常量池从index为1开始使用。
-* access_flags：表示访问权限，例如`ACC_PUBLIC`为public、`ACC_FINAL`为final，`ACC_SUPER`表示会使用`invokespecial`指令调用超类方法。还有其他一些枚举，最终的值是若干个标记的或运算结果。
-* this_class、super_class、interfaces_count、interfaces数组：类索引、父类索引和接口索引集合可以确定Java类的继承关系，它们的值为常量池中的index。
-* fields_count和fields[]集合：field_info结构表示所有字段，包括类和接口中的静态变量和成员变量，但不包括继承自父类、父接口中的。
+### magic（魔数）
+唯一作用是确定这个文件是否为一个能被虚拟机接收的 Class 文件，值为0xCAFEBABE
+
+### minor_version,major_version
+Java字节码的副版本和主版本，下面是 Java 11之前的版本情况
+
+|Java SE| class file format 版本范围 |
+|---|---|
+|1.0.2|45.0 ≤ v ≤ 45.3|
+|1.1|45.0 ≤ v ≤ 45.65535|
+|1.2|45.0 ≤ v ≤ 46.0|
+|1.3|45.0 ≤ v ≤ 47.0|
+|1.4|45.0 ≤ v ≤ 48.0|
+|5.0|45.0 ≤ v ≤ 49.0|
+|6|45.0 ≤ v ≤ 50.0|
+|7|45.0 ≤ v ≤ 51.0|
+|8|45.0 ≤ v ≤ 52.0|
+|9|45.0 ≤ v ≤ 53.0|
+|10|45.0 ≤ v ≤ 54.0|
+|11|45.0 ≤ v ≤ 55.0|
+
+### constant_pool_count、constant_pool
+* constant_pool_count：常量池数量
+* constant_pool：常量池数组
+
+常量池中包含引用的各种字符串常量、类和接口名称、字段名称和其他被ClassFile结构引用的常量（比如方法名）。常量池从index为1开始使用。
+
+```c
+cp_info {
+    u1 tag; // 表示常量池中的一个条目的类型
+    u1 info[]; // 根据tag确定info的格式
+}
 ```
+
+详细的各种数据类型，可以在官方文档中查看：https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-4.html#jvms-4.4
+
+### access_flags
+表示访问权限，例如`ACC_PUBLIC`为public、`ACC_FINAL`为final，`ACC_SUPER`表示会使用`invokespecial`指令调用超类方法。还有其他一些枚举，最终的值是若干个标记的或运算结果。
+
+### this_class、super_class、interfaces_count、interfaces数组
+类索引、父类索引和接口索引集合可以确定Java类的继承关系，它们的值为常量池中的index。
+
+### fields_count和fields[]集合
+field_info结构表示所有字段，包括类和接口中的静态变量和成员变量，但不包括继承自父类、父接口中的。
+```c
 field_info {
     u2             access_flags; // ACC_PUBLIC、ACC_PRIVATE、ACC_PROTECTED、ACC_STATIC、ACC_VOLATILE 等枚举
     u2             name_index; // 在常量池中的index，可以在常量池中得到字段名称
@@ -71,7 +109,7 @@ field_info {
     attribute_info attributes[attributes_count];
 }
 ```
-descriptor_index指向的常量池数据具体含义：
+`descriptor_index` 指向的常量池数据具体含义：
 
 |FieldType    |type	      |Type	|Interpretation|
 |---          |---        |---|---|
@@ -86,8 +124,11 @@ descriptor_index指向的常量池数据具体含义：
 |Z	          |boolean	  |boolean类型|
 |[	          |reference  |一个数组维度，比如 double[][] 类型就是 [[D |
 
-* methods_count、methods[]集合：methods[]中数据类型为method_info结构，表示类或接口中的成员方法、静态方法、构造方法、静态代码块，不包含继承的方法。
-```
+attributes目前只有 `ConstantValue` 这种情况，使用了final声明的字段就会有这个attribute。
+
+### methods_count、methods[]
+methods_count表示methods集合的长度，methods中数据类型为method_info结构，表示类或接口中的成员方法、静态方法、构造方法，不包含继承的方法。
+```c
 method_info {
     u2             access_flags;  // 描述符，比如public等访问权限、static、final、native、abstract等
     u2             name_index;  // 方法名称索引
@@ -96,10 +137,11 @@ method_info {
     attribute_info attributes[attributes_count];
 }
 ```
-属性有很多，比如 Code_attribute（代码）、Exceptions_attribute（异常信息）、InnerClasses_attribute（内部类）、EnclosingMethod_attribute、Synthetic_attribute、Signature_attribute、StackMapTable_attribute等
+方法附加属性有很多，比如 Code（代码）、Exceptions（异常信息）、RuntimeVisibleAnnotations（运行时可见的注解）、MethodParameters（方法参数）等。
 
-Code属性
-包含了方法内的指令和辅助信息，
+#### Code属性
+包含了方法内的指令和辅助信息
+```c
 Code_attribute {
     u2 attribute_name_index; // 属性名称在常量池中的index
     u4 attribute_length; // 属性的字节长度
@@ -116,10 +158,12 @@ Code_attribute {
     u2 attributes_count; // Code属性内的属性数量
     attribute_info attributes[attributes_count]; Code属性内的属性集合
 }
+```
 Code中又嵌套了其他属性，比如LineNumberTable、LocalVariableTable、LocalVariableTypeTable、StackMapTable
 
-LineNumberTable
+##### LineNumberTable
 表示源码和字节码指令的行数对应，比如异常堆栈和debug都会用到。
+```c
 LineNumberTable_attribute {
     u2 attribute_name_index;
     u4 attribute_length;
@@ -128,9 +172,11 @@ LineNumberTable_attribute {
         u2 line_number; // 对应源码行数
     } line_number_table[line_number_table_length];
 }
+```
 
-LocalVariableTable
+##### LocalVariableTable
 描述局部变量和源码中变量的信息
+```c
 LocalVariableTable_attribute {
     u2 attribute_name_index;
     u4 attribute_length;
@@ -142,9 +188,11 @@ LocalVariableTable_attribute {
         u2 index; // 在本地变量表中的index
     } local_variable_table[local_variable_table_length];
 }
+```
 
-MethodParameters 
+##### MethodParameters 
 记录方法的参数信息，Java8新增，需要编译时加上-parameters参数，用于支持反射获取方法参数名称。
+```c
 MethodParameters_attribute {
     u2 attribute_name_index;
     u4 attribute_length;
@@ -153,20 +201,22 @@ MethodParameters_attribute {
         u2 access_flags;
     } parameters[parameters_count];
 }
+```
 
-StackMapTable
+##### StackMapTable
 在Java 1.6添加，用于JVM加载class时的校验流程执行类型检查验证，这个是字节码里面最复杂的结构。官方文档中的验证流程介绍：https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-4.html#jvms-4.10，这个验证的介绍篇幅很多。
 
 对于JVM来说，一个字节码文件的数据可能是异常的，比如你可以随便手写一个字节码文件。所以Java虚拟机在加载类文件时会执行验证，检查类文件数据是否合法。其中有一项就是检查方法的字节码指令是否正确排序、是否对正确类型的值进行操作等等。JVM引入了StackMapTable进行辅助，编译生成字节码文件时，在Code属性中使用StackMapTable来记录指令执行前后局部变量和操作数栈的值类型和数量，用于验证流程使用。
 
 简单来说，比如字节码中并没有显式的值类型，在验证阶段就需要逐步分析每条指令推断实时的局部变量和操作数栈信息，对于顺序的代码逐步计算验证即可，但如果遇到分支跳转代码，执行的代码流可能性很多，需要穷举所有执行的情况，如果在编译时把每个basic block开始时局部变量和操作数栈情况记录下来，验证此分支时就不需要从分支之前穷举推导验证，可以节省很多时间，也就是把时间耗在编译时，而不是加载验证的时候。当然，StackMapTable只是减少了部分的验证工作
 
-来自《深入理解Java虚拟机》中的一段话：
+> 来自《深入理解Java虚拟机》中的一段话：
 这项属性描述了方法体中所有的基本块 （Basic Block，按照控制流拆分的代码块）开始时本地变量表和操作栈应有的状态，在字节码验证期间，就不需要根据程序推导这些状态的合法性，只需要检查StackMapTable属性中 的记录是否合法即可。这样将字节码验证的类型推导转变为类型检查从而节省一些时间。 理论上StackMapTable属性也存在错误或被篡改的可能，所以是否有可能在恶意篡改了 Code属性的同时，也生成相应的StackMapTable属性来骗过虚拟机的类型校验则是虚拟机设 计者值得思考的问题。
 
 但如果每一行都加入栈帧映射（stack map frame）记录局部变量和操作数的值类型会很占空间，所以JVM做了优化，每个分支跳转之后使用一个stack map frame用于表示栈帧变化，比如if-else，try-catch等。而直落分支会省略记录，因为直落分支并不会产生 frame 的变化。分支内仍然使用旧的类型推导方式。
 
 那么如下代码，看起有三段代码块（JVM文档中称为basic block）：
+```java
 // Java代码  
 public class Foo {  
     public void foo() {  
@@ -184,8 +234,9 @@ public class Foo {
         // basic block 3 end  
     }  
 }  
-
+```
 根据前面说的优化规则，实际只有两个block：
+```java
 public class Foo {  
     public void foo() {  
         // basic block 1 start  
@@ -199,10 +250,12 @@ public class Foo {
         int l = 0;  
         // basic block 2 end  
     }  
-}  
+}
+```
 而这个方法就会有一个StackMapTable属性表，里面只有一个stack frame map记录。（本来应该是两个记录，但第一个是隐式的，没有记录在属性表里，应该也是为了节省空间）
 
 使用javap命令查看这个foo方法的字节码：
+```java
 public void foo();
     descriptor: ()V
     flags: (0x0001) ACC_PUBLIC
@@ -236,6 +289,8 @@ public void foo();
         frame_type = 253 /* append */
           offset_delta = 10
           locals = [ int, int ]
+```
+
 隐式的第一个stack map frame是根据方法签名计算出来的，这个例子foo是个成员方法，没有声明参数，所以参数自只有一个隐式的this。所以隐式的第一个stack map frame操作数栈为空，局部变量为[this]。
 
 下一个基本块从字节码偏移量10开始。此处变量k已经不在作用域，所以局部变量的内容应该是：[ this, int, int ]，
@@ -244,12 +299,15 @@ public void foo();
 StackMapTable 内有各种类型的属性，比如上面才看到的append类型是为了不用记录全部数据，而只记录相对上一个stack map frame增加的数据，用于减少空间占用，下面将依次介绍。
 
 StackMapTable属性的结构：
+```
 StackMapTable_attribute {
     u2              attribute_name_index;
     u4              attribute_length;
     u2              number_of_entries;
     stack_map_frame entries[number_of_entries]; // 每个entry描述一个stack map frame
 }
+```
+```
 // stack_map_frame的多种类型
 union stack_map_frame {
     same_frame;
@@ -260,8 +318,10 @@ union stack_map_frame {
     append_frame;
     full_frame;
 }
+```
 
-full_frame：记录完整 locals 和 stack 中的值类型， offset_delta 用来计算当前stack map frame对应的指令位置，也就是对应的basic block的第一个指令的index。如果前一个frame是第一个隐式frame，则对应的指令位置就是offset_delta，如果前一个frame不是第一个，则对应的指令位置为上一个 frame 对应的index + offset_delta + 1。
+`full_frame`：记录完整 locals 和 stack 中的值类型， offset_delta 用来计算当前stack map frame对应的指令位置，也就是对应的basic block的第一个指令的index。如果前一个frame是第一个隐式frame，则对应的指令位置就是offset_delta，如果前一个frame不是第一个，则对应的指令位置为上一个 frame 对应的index + offset_delta + 1。
+```
 full_frame {
     u1 frame_type = FULL_FRAME; /* 255 */
     u2 offset_delta; // 相对于前一个stack map frame的偏移量
@@ -270,10 +330,12 @@ full_frame {
     u2 number_of_stack_items;
     verification_type_info stack[number_of_stack_items]; // 记录操作数栈中的值类型
 }
+```
 其他类型的frame_type都是为了简化，减少字节码数量
 
-same_frame：frame_type 为 0-63 代表当前 frame 的类型是 same_frame，offset_delta等值等于frame_type。
+`same_frame`：frame_type 为 0-63 代表当前 frame 的类型是 same_frame，offset_delta等值等于frame_type。
 意思是 locals 和上一个 frame 相同，但是 stack 为空
+```
 same_frame {
     u1 frame_type = SAME; /* 0-63 */
 }
@@ -283,8 +345,10 @@ same_frame_extended {
     u1 frame_type = SAME_FRAME_EXTENDED; /* 251 */
     u2 offset_delta;
 }
+```
 
-same_locals_1_stack_item_frame：locals和前一个frame相同。有一个深度为1的操作数stack，offset_delta为frame_type-64
+`same_locals_1_stack_item_frame`：locals和前一个frame相同。有一个深度为1的操作数stack，offset_delta为frame_type-64
+```
 same_locals_1_stack_item_frame {
     u1 frame_type = SAME_LOCALS_1_STACK_ITEM; /* 64-127 */
     verification_type_info stack[1];
@@ -295,10 +359,14 @@ same_locals_1_stack_item_frame_extended {
     u2 offset_delta;
     verification_type_info stack[1];
 }
+```
 
 这两个 frame 表示的 stack 都是 empty
-chop_frame 表示相比前一个frame，少了最后的 251 - frame_type 个 局部变量，
-append_frame 表示  除了增加的额外的frame_type - 251 个局部变量，其他的局部变量和前一个frame一样
+
+`chop_frame` 表示相比前一个frame，少了最后的 251 - frame_type 个 局部变量
+
+`append_frame` 表示  除了增加的额外的frame_type - 251 个局部变量，其他的局部变量和前一个frame一样
+```
 chop_frame {
     u1 frame_type = CHOP; /* 248-250 */
     u2 offset_delta;
@@ -309,13 +377,56 @@ append_frame {
     u2 offset_delta;
     verification_type_info locals[frame_type - 251];
 }
+```
 这两个类型也是为了节省空间，但在添加或删除超过 3 个 locals 的时候，还是会降级到使用 full_frame
-有点像视频编码的i、p、b帧的思想
+> 有点像视频编码的i、p、b帧的思想
 
-- attributes_count和attributes集合：用于描述class文件的属性，比如SourceFile属性用于描述编译为此字节码文件的源码文件的名称，更完善的信息可以查看文档：https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-4.html#jvms-4.7-320
+`attributes_count` 和 `attributes` 集合：用于描述class文件的属性，比如SourceFile属性用于描述编译为此字节码文件的源码文件的名称，更完善的信息可以查看文档：https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-4.html#jvms-4.7-320
 
 
 > jvm指令集大全：https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-7.html
+
+## 指令执行流程
+JVM会为每个线程分配一个虚拟机栈，每次调用方法，都会产生一个方法帧，每个方法帧内都包含一个局部变量数组、操作数栈等信息。方法返回的时候，当前栈帧会传回此方法的执行结果给前一个栈帧，然后虚拟机会丢弃当前栈帧，使得前一个栈帧重新成为栈顶的栈帧，并将返回值（如果有）push到该栈帧的操作数堆栈上。
+
+![](./引用图片/虚拟机线程栈.png)
+
+局部变量数组和操作数堆栈的大小在编译时确定，也就是字节码中的Code属性内的max_locals和max_stack的值决定。
+
+- 局部变量数组，用于存储当前方法内的局部变量和对应值
+- 操作数栈，在方法执行过程中，根据字节码指令，往操作数栈中写入数据或提取数据，即入栈（push）、出栈（pop） 同时作为计算过程中变量临时的存储空间。
+
+示例：
+```java
+// 源码
+class Test {
+    public int add(int a, int b) {
+        int c = 1;
+        return a + b + c;
+    }
+}
+```
+
+```
+// add方法的字节码指令
+iconst_1
+istore_3
+iload_1
+iload_2
+iadd
+iload_3
+iadd
+ireturn
+```
+
+add方法执行过程中，局部变量数组和操作数栈变化情况：
+![](./引用图片/操作数栈和局部变量.png)
+
+各类指令的分类参考：https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-7.html
+
+> Android中的虚拟机会使用寄存器，和普通的JVM有所不同
+
+> 一些字节码操作工具 ASM、AspectJ、Javassist、byte buddy。java agent、cglib
 
 ## GC
 Java才用可达性算法（根搜索）判断对象是否需要回收。内存回收有标记-清除、复制、标记-整理等算法，因为不同对象有不同的生命周期，所以JVM将内存划为新生代和老生代，新生代采用复制算法，因为新生代每次回收后存活的对象是少数，所以复制并不会付出很多的代价，而老生代使用标记-整理之类的算法。

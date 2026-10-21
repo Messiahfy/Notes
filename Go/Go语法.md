@@ -102,6 +102,8 @@ Go 使用`type`关键字定义类型，比如后面介绍的定义结构体、�
 type 类型名字 底层类型
 ```
 
+> Go 没有区分可空和非空类型
+
 ## 包和文件
 Go语言中的包和其他语言的库或模块的概念类似，目的都是为了支持模块化、封装、单独编译和代码重用。
 
@@ -142,10 +144,13 @@ func init() {
 ## 字符串
 字符串是一个不可改变的字节序列，赋值和追加字符串都会引用新的字符串值，而不会修改原本的值
 ```go
+
 s := "hello, world"
 t := s
 s += ", right foot"
 ```
+
+Go 的字符串被设计为基本类型，所以空值为 "" 而不是 nil。
 
 ## 常量
 常量表达式的值在编译期计算，而不是在运行期。
@@ -1155,7 +1160,7 @@ func main() {
 ```
 
 ## goroutine退出
-Go 语言没有提供类似 Kotlin 的 `Job.cancel()` 这种明确的方法来取消 goroutine，所以可以选择通过关闭 channel 的方式，关闭 Channel 后，所有从该 Channel 读取的 Goroutine 都会立即收到“零值”。
+Go 语言没有提供类似 Kotlin 的 `Job.cancel()` 这种明确的方法来取消 goroutine，所以可以选择通过关闭 channel 的方式，关闭 Channel 后，所有从该 Channel 读取的 Goroutine 都会立即收到“零值”（根据类型，比如int为0，指针为nil）。
 ```go
 var done = make(chan struct{})
 
@@ -1176,7 +1181,7 @@ func cancelled() bool {
 }
 ```
 
-也可以使用 `context`，下面是一个三层级 goroutine 的取消例子：
+Go 1.7+ 推荐使用 `context` 来做取消控制，下面是一个三层级 goroutine 的取消例子：
 ```go
 func main() {
 	fmt.Println("🚀 [主程序] 启动")
@@ -1282,7 +1287,7 @@ func Balance() int {
 }
 ```
 
-> **注意：go里没有重入锁**
+> **注意：go 没有重入锁**
 
 ## sync.RWMutex读写锁
 ```go
