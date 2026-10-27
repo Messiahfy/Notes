@@ -11,13 +11,13 @@ theme主题是一种适用于整个应用程序、activity或view层次结构的
 ## 创建和应用样式
 要创建新样式或主题，请打开项目的res/values/styles.xml文件。 对于您要创建的每种样式，请按照下列步骤操作：
 
-1. 添加一个具有唯一标识样式名称的<style>元素。
-2. 为要定义的每个style属性添加一个<item>元素。
+1. 添加一个具有唯一标识样式名称的`<style>`元素。
+2. 为要定义的每个style属性添加一个`<item>`元素。
 
-每个item中的name指定一个属性，对应布局中的XML属性。 <item>元素中的值是该属性的值。
+每个item中的name指定一个属性，对应布局中的XML属性。 `<item>`元素中的值是该属性的值。
 
 例如，如果你定义如下style：
-```
+```xml
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="GreenText" parent="TextAppearance.AppCompat">
@@ -26,7 +26,7 @@ theme主题是一种适用于整个应用程序、activity或view层次结构的
 </resources>
 ```
 你可以应用该style应用于一个view，如下：
-```
+```xml
 <TextView
     style="@style/GreenText"
     ... />
@@ -42,7 +42,7 @@ theme主题是一种适用于整个应用程序、activity或view层次结构的
 继承的样式属性并添加新的属性。
 
 例如，您可以继承Android平台的默认文本外观并对其进行如下修改：
-```
+```xml
 <style name="GreenText" parent="@android:style/TextAppearance">
     <item name="android:textColor">#00FF00</item>
 </style>
@@ -51,7 +51,7 @@ theme主题是一种适用于整个应用程序、activity或view层次结构的
 和更高级别的兼容性。 支持库样式通常具有与来自平台的样式相似的名称，但包含AppCompat。
 
 要从库或自己的项目中继承样式，请声明父样式名称，而不要使用上面显示的@android:style/部分。 例如，以下示例从支持库继承文本外观样式：
-```
+```xml
 <style name="GreenText" parent="TextAppearance.AppCompat">
     <item name="android:textColor">#00FF00</item>
 </style>
@@ -59,7 +59,7 @@ theme主题是一种适用于整个应用程序、activity或view层次结构的
 
 您还可以通过使用**点符号扩展样式**名称而不是使用父属性来继承样式（**除了来自平台的样式**）。 也就是说，将样式的名称加上想要继承的样式的名称，用句点分隔。 通常
 只有在扩展自己的样式时才会这样做，而不是其他库中的样式。 例如，以下样式继承了上述GreenText样式中的所有样式，然后增加文本大小：
-```
+```xml
 <style name="GreenText.Large">
     <item name="android:textSize">22dp</item>
 </style>
@@ -76,14 +76,14 @@ TextView XML属性包含android：inputType属性，您可以将其应用于接�
 <activity>标记上应用具有android：theme属性的主题。
 
 例如，以下是如何将Android支持库的material design "dark" 主题应用于整个应用程序：
-```
+```xml
 <manifest ... >
     <application android:theme="@style/Theme.AppCompat" ... >
     </application>
 </manifest>
 ```
 以下是如何将“light”主题应用于一项Activity：
-```
+```xml
 <manifest ... >
     <application ... >
         <activity android:theme="@style/Theme.AppCompat.Light" ... >
@@ -106,7 +106,7 @@ TextView XML属性包含android：inputType属性，您可以将其应用于接�
 用程序的颜色设计。
 
 例如，您的styles.xml文件应该看起来类似于以下内容：
-```
+```xml
 <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
     <!-- Customize your theme here. -->
     <item name="colorPrimary">@color/colorPrimary</item>
@@ -119,7 +119,7 @@ TextView XML属性包含android：inputType属性，您可以将其应用于接�
 用中的外观。
 
 一旦你知道你的颜色，更新res / values / colors.xml中的值：
-```
+```xml
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--   color for the app bar and other primary UI elements -->
@@ -134,7 +134,7 @@ TextView XML属性包含android：inputType属性，您可以将其应用于接�
 </resources>
 ```
 然后你可以重写你想要的任何其他样式。 例如，您可以按如下方式更改活动背景颜色：
-```
+```xml
 <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
     ...
     <item name="android:windowBackground">@color/activityBackground</item>
@@ -163,7 +163,7 @@ res/values-v21/styles.xml    # themes for API level 21+ only
 
 例如，要声明Android 5.0（API级别21）及更高版本的窗口转换，您需要使用一些新的属性。 所以你的基本主题可能是这样的：
 *res/values/styles.xml*
-```
+```xml
 <resources>
     <!-- base set of styles that apply to all versions -->
     <style name="BaseAppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
@@ -178,7 +178,7 @@ res/values-v21/styles.xml    # themes for API level 21+ only
 ```
 然后，只需在其他文件中添加版本特定的样式，如下所示：
 *res/values-v21/styles.xml*
-```
+```xml
 <resources>
     <!-- extend the base theme to add styles available only with API level 21+ -->
     <style name="AppTheme" parent="BaseAppTheme">
@@ -193,13 +193,13 @@ res/values-v21/styles.xml    # themes for API level 21+ only
 ## 自定义widget样式
 framework和支持库中的每个widget都有一个默认样式。 例如，当您使用support library中的主题设计应用程序样式时，Button的一个实例使用Widget.AppCompat.Button
 样式进行样式设置。 如果您想将不同的widget样式应用于按钮，则你可以使用布局文件中的style属性。 例如，以下应用库的无边框按钮样式：
-```
+```xml
 <Button
     style="@style/Widget.AppCompat.Button.Borderless"
     ... />
 ```
 如果您想将此样式应用于所有按钮，则可以在主题的buttonStyle中声明它，如下所示：
-```
+```xml
 <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
     <item name="buttonStyle">@style/Widget.AppCompat.Button.Borderless</item>
     ...

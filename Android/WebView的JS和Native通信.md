@@ -412,3 +412,575 @@ mWebView.evaluateJavascript("javascript:jsFunction()", new ValueCallback<String>
 webView.loadUrl("javascript:jsCode");
 ```
 通过这个方式也可以执行JS代码。但`loadUrl()`不能像`evaluateJavascript()` 得到结果回调。
+
+# JsBridge的实现方案
+## 初步设计
+### 定义通信协议
+使用`@JavascriptInterface`注解的方法被JavaScript调用时，调用的函数名称和参数必须和Java/Kotlin中声明的一致，并且由于参数类型只能使用基本类型和字符串，如果要传递复杂对象就要使用Json等格式的字符串来表示。
+
+而使用`evaluateJavascript`执行JavaScript代码也类似，Java/Kotlin调用的JavaScript函数，必须和JavaScript中声明的一致。
+
+所以必须保证Web和Native都使用约定好的方法名称，才能执行成功。**在实际的项目开发中，这就需要Android、iOS和Web三方共同约定好各个接口和参数以及返回数据或者回调数据格式。**
+
+
+### Js调用Java/Kotlin
+
+#### 1. 定义传入参数格式
+
+例如最基本的使用，JavaScript调用Java/Kotlin的方法，可以传入一个Int和一个String类型参数：
+
+```Kotlin
+class Foo {
+    @JavaScriptInterface
+    fun test(a: Int, b: String) {
+        //
+    }
+}
+```
+
+但在很多情况，参数可能会是一个复杂数据，通常会用一个对象来表示，然而JS和Java/Kotlin的通信并不支持自定义对象，此时我们可以使用Json等格式的序列化文本数据，也就是String来传输任意参数。
+
+
+例如JavaScript传入一个User信息的json字符串：
+
+```JSON
+{
+    "age": 12, // 年龄
+    "name": "Tom", // 名称
+    "shoes": ["Nike", "Adidas", "ANTA"], // 拥有的鞋
+    "address": {
+        "city": "Chengdu", // 住址
+        "postcode": "610000" // 邮编
+    }
+}
+```
+
+
+在Kotlin代码定义接口时，就可以只声明一个字符串，然后解析字符串内容即可：
+
+```Kotlin
+@JavaScriptInterface
+fun test1(json: String) {
+    // 这里简单使用JSONObject，也可以使用Gson、Moshi等json解析库
+    val jsonObject = JSONObject(json)
+    val age = jsonObject.getInt("age")
+    val name = jsonObject.getString("name")
+    val shoes = jsonObject.getJSONArray("shoes")
+    val address = jsonObject.getJSONObject("address")
+    val city = address.getString("city")
+    val postcode = address.getString("postcode")
+}
+```
+
+
+同样的，前面所举例的`test(a: Int, b: String)`函数，也可以改写为只使用一个json字符串参数的形式：
+
+```Kotlin
+@JavaScriptInterface
+fun test(json: String) {
+    val jsonObject = JSONObject(json)
+    val a = jsonObject.getInt("a")
+    val b = jsonObject.getString("b")
+}
+```
+
+
+那么进一步，**我们将所有注册的接口函数的参数都约定为一个Json字符串，这样统一的形式有利于统一的接口设计和流程，便于设计JsBridge封装库。**
+
+#### 2. 声明单一方法，动态注册
+
+统一参数为单个json字符串之后，还可以将`@JavascriptInterface`声明的方法也统一为一个（好处就是便于抽象封装设计）。但如果方法为一个，如何区分不同的功能调用？
+
+此时就需要让传入的Json字符串参数添加更多的信息，比如方法名，从而执行不同的功能。如下：
+
+```JSON
+{
+    // 方法名称
+    "method": "foo",
+    // 参数，可以使用json字符串，或者json对象，约定好就行
+    "params": {
+        "param1": 1,
+        "param2": "content",
+        "param3": {
+            "a": 1,
+            "b": true
+        }
+    }
+}
+```
+
+这样我们就只需要声明一个使用`@JavascriptInterface`注解的方法，所有的方法调用都通过它执行：
+
+```Kotlin
+class JsBridgeInterface {
+
+    // Js通过调用此方法，执行所有需要native执行的功能
+    @JavascriptInterface
+    fun callNative(json String) {
+        // 解析json，得到方法名称以及参数等信息
+        val jsonObject = JSONObject(json)
+        val method = jsonObject.getString("method")
+        // 通过方法名，找到对应的Handler
+        val handler = JsBridgeHandlers.get(method)
+        if (handler != null) {
+            // 得到参数
+            val params = jsonObject.getString("params")
+            // 执行Handler
+            handler.execute(params)
+        }
+    }
+}
+
+webView.addJavascriptInterface(JsBridgeInterface())
+```
+
+JsBridge中提供`JsBridgeHandler`接口，用于外部实现并注册。
+
+```Kotlin
+interface JsBridgeHandler {
+    fun method(): String
+    fun execute(params: String)
+}
+```
+
+
+并且提供`JsBridgeHandlers`，让开发者通过它注册各个方法的执行者`JsBridgeHandler`
+
+```Kotlin
+// 开发者编写代码
+
+// 自定义HandlerA
+class HandlerA: JsBridgeHandler {
+    override fun method() = "methodA"
+
+    override fun execute(params: String) {
+        //......
+    }
+}
+
+// 自定义HandlerB
+class HandlerB: JsBridgeHandler {
+    override fun method() = "methodB"
+
+    override fun execute(params: String) {
+        //......
+    }
+}
+
+// 注册这两个Handler到JsBridgeHandlers中
+JsBridgeHandlers.register(HandlerA())
+JsBridgeHandlers.register(HandlerB())
+```
+
+
+从而形成如下结构：
+![](./引用图片/JsBridge%20Handler结构图.png)
+
+JavaScript传递参数，Java/Kotlin解析参数得到方法名称，通过方法名称找到对应的Handler，从而执行对应的代码。这样比原始的方式更加灵活，可以更动态地让JsBridge的使用者注册和移除接口，而不用每次都去修改实际的 JavascriptInterface 类（也就可以封装到库内部），并且将不同功能分为不同的Handler模块，利于代码维护。
+
+> 或者将参数分为方法名和参数json也是类似的效果，只要和web/iOS统一即可。
+> 
+> ```Kotlin
+> class JsBridgeInterface {
+>     @JavascriptInterface
+>     fun callNative(methodName: String, params: String) {}
+> }
+> ```
+> 
+> 
+
+#### 3. 返回值
+
+`@JavascriptInterface `方法可以直接返回值，也可以统一为Json格式的字符串返回给JS即可。使用这样的方式的话，`JsBridgeHandler`接口的`execute`方法则需要做调整，返回值为字符串：
+
+```Kotlin
+interface JsBridgeHandler {
+    fun method(): String
+    fun execute(params: String): String
+}
+```
+
+也可以不直接返回值，而是使用回调的方式返回结果给JS，在下面将讨论这种方式。
+
+
+
+### Java/Kotlin调用Js
+
+#### 1. 回调JS
+
+通常编程中想要回调则需要得到一个对象（比如实现某接口的对象、或者函数指针），但JavaScript无法传递对象给Java/Kotlin，所以要采用间接的方式回调。Js可以在传给Java/Kotlin的参数中添加`callback`字段，用于表示一个Js函数的名称，Java/Kotlin回调Js就是通过`WebView.evaluateJavascript`来调用Js中的callback函数。
+
+这样的话，Js传给Java/Kotlin的Json中增加callback字段，表示Js的函数名称：
+
+```JSON
+{
+    "method": "foo",
+    "params": {...},
+    // 回调函数名
+    "callback": "callbackName"
+}
+```
+
+
+Js内部同样也需要有回调函数的容器，JS传递包含函数名、参数、回调函数ID的信息给Java/Kotlin，Java/Kotlin执行完成后通过`WebView.evaluateJavascript`来调用Js中的callback函数：
+![](./引用图片/JsBridge%20回调结构图.png)
+
+
+Js也可以提供一个统一入口函数给Java/Kotlin调用，此时Java/Kotlin回调Js就需要类似这样的Json数据，包含`callbackId`参数，Js内部通过`callbackId`找到对应的函数执行：
+
+```Kotlin
+{
+    "callbackId": "xxx",
+    "params": {...},
+}
+```
+
+#### Java/Kotlin主动发起调用JS
+
+主动调用JS和上述的回调方式本质是一样的，所以同样也可以约定好数据格式，通过`WebView.evaluateJavascript`调用即可。
+
+
+### Json解析模板代码
+
+完成上述设计后，基本的JsBridge功能已经具备，但在Json解析流程会存在较多的模板代码，每一个自定义的JsBridgeHandler中，都会解析Json字符串，每个JsBridgeHandler中的参数都是根据实际约定的方法而定。
+
+
+如下自定义的两个JsBridgeHandler都存在解析Json字段的模板代码：
+
+```Kotlin
+class HandlerA: JsBridgeHandler {
+    override fun method() = "methodA"
+
+    override fun execute(params: String) {
+        val jsonObject = JSONObject(json)
+        val a = jsonObject.getString("a")
+        val b = jsonObject.getString("b")
+        val c = jsonObject.getInt("c")
+        // ......
+    }
+}
+
+class HandlerB: JsBridgeHandler {
+    override fun method() = "methodB"
+
+    override fun execute(params: String) {
+        val jsonObject = JSONObject(json)
+        val foo = jsonObject.getString("foo")
+        val bar = jsonObject.getString("bar")
+        val xxx = jsonObject.getInt("xxx")
+        // ......
+    }
+}
+
+// ...... 其他 JsBridgeHandler 子类
+```
+
+可以看到类似的模板代码是很多的，那么我们**可以使用apt/ksp或者字节码生成技术**，来生成或修改代码，让我们在使用时可以直接得到已经解析Json后的实际参数。
+
+
+例如一种可以考虑的方式，使用`@JsBridgeMethod`注解声明方法：
+
+```Kotlin
+@JsBridgeMethod("methodA")
+fun foo(a: String, b: String, c: Int) {
+    // ......
+}
+```
+
+
+根据`@JsBridgeMethod`注解中的方法名字符串，和各个参数的名称，为我们生成`HandlerA`代码，内部会调用 `foo` 方法，从而简化使用：
+
+```Kotlin
+// 生成代码
+class HandlerA: JsBridgeHandler {
+    override fun method() = "methodA"
+
+    override fun execute(params: String) {
+        val jsonObject = JSONObject(json)
+        val a = jsonObject.getString("a")
+        val b = jsonObject.getString("b")
+        val c = jsonObject.getInt("c")
+        
+        // 转调 foo 方法
+        foo(a, b, c)
+    }
+}
+```
+
+通过这样的处理，既保持了统一方法参数的设计，也提供了参数的便捷解析使用。
+
+
+> 配合操作字节码修改代码的话，也可以实现自动收集`JsBridgeHandler`，而不用手动注册。
+> 
+
+
+### WebView上下文信息
+
+如果在`JsBridgeHandler`内部想要访问WebView或者所在的Activity、Context，如果没有良好的设计就容易产生代码耦合或者编写代码比较麻烦。
+
+
+比如可能需要给自定义的`JsBridgeHandler`类加上参数，外部传入Activity，可以选择在构造函数，或者`execute`方法中传入等方式，这里以在`execute`方法中传入为例：
+
+```Kotlin
+class HandlerA: JsBridgeHandler {
+    override fun method() = "methodA"
+
+    override fun execute(activity: Activity?, params: String) {
+        // ...
+    }
+}
+```
+
+而为了便捷使用，我们也可以利用自动生成代码来完成，在`@JsBridgeMethod`注解的方法参数中添加*`WebViewContext`**类型参数*：
+
+```Kotlin
+@JsBridgeMethod("methodA")
+fun foo(*@JsBridgeContext webViewContext: WebViewContext, *a: String, b: String, c: Int) {
+    *webViewContext.getActivity()*
+    // ......
+}
+```
+
+
+`WebViewContext`* *为JsBridge内部提供的类，通过它可以得到当前Js所在页面的WebView、Activity：
+
+```Kotlin
+class WebViewContext(webView: WebView?) {
+    private val webViewRef = WeakReference(webView)
+    
+    fun getActivity(): Activity? {
+        return webViewRef.get()?.*context as? Activity*
+    }
+    fun getWebView(): WebView? {
+        return webViewRef.get()
+    }
+}
+```
+
+有了如上设计，还差一步就是`WebViewContext`在哪里传入，这里举个例子：
+
+比如**JsBridge**提供的`JsBridgeInterface`就需要传入WebView：
+
+```Kotlin
+class JsBridgeInterface(private val webView: WebView) {
+
+    @JavascriptInterface
+    fun callNative(json String) {
+        val jsonObject = JSONObject(json)
+        val method = jsonObject.getString("method")
+        val handler = JsBridgeHandlers.get(method)
+        if (handler != null) {
+            val params = jsonObject.getString("params")
+            // 构造WebViewContext
+            val webViewContext = WebViewContext(webView)
+            // 执行Handler的execute时，传入WebViewContext
+            handler.execute(webViewContext, params)
+        }
+    }
+}
+
+webView.addJavascriptInterface(JsBridgeInterface(webView))
+```
+
+最终采用什么方式还是要根据实际项目情况而定。
+
+
+### 初步设计总结
+
+JsBridge的基本功能包含了以下部分：
+
+1. 约定参数、返回值、回调的数据格式
+
+2. 注册每个Js方法，转发调用（可以考虑生成代码、自动注册等）
+
+3. 自动解析Json、WebView上下文 模板代码
+
+根据实际项目情况可能还有其他的需求，根据实际情况再具体考虑。
+
+## 实现方式
+
+### 1. 使用流程
+
+采用注解结合生成代码的方式，生成对应的每一个`@JavascriptInterface`方法，以及自动解析Json参数。
+
+
+
+目前设计了4个注解，结合使用：
+
+```Kotlin
+@JsBridgeModule
+class Test {
+    @JsBridgeMethod
+    fun foo(a: Int, b: String) {
+        //...
+    }
+     
+    @JsBridgeMethod
+    fun bar(a: Int, @JsBridgeParam("bbb") b: String) {
+        //...
+    }
+    
+    @JsBridgeMethod
+    fun caa(@JsBridgeContext webViewContext: WebViewContext, a: Int) {
+        //...
+    }
+}
+```
+
+- **@JsBridgeModule**：表示这是一个JavaScriptInterface模块，将生成对应的类用于注册到WebView
+
+- **@JsBridgeMethod**：表示这是一个JavaScriptInterface方法，将生成对应的@JavascriptInterface方法
+
+- **@JsBridgeParam：**@JsBridgeMethod注解的方法参数名称将作为json的字段，比如b就会解析json中key为"b"的字段，如果希望key和参数声明名称不一样，则可以使用**@JsBridgeParam**注解，比如上面代码将解析json中的"bbb"字段传入到b参数。
+
+- **@JsBridgeContext：**配合**WebViewContext**类型使用**，**用于得到**WebViewContext**对象，方便获取WebView上下文信息。
+
+
+
+如上代码将生成如下代码：
+
+```Kotlin
+public class Test_JsBridge {
+  private val originObject: Test
+
+  private val moshi: Moshi = Moshi.Builder().build()
+
+  private val adapter: JsonAdapter<Map<String, Any>> =
+      this.moshi.adapter(Types.newParameterizedType(Map::class.*java*, String::class.*java*,
+      Any::class.*java*))
+
+  public constructor() {
+    this.originObject = Test()
+  }
+
+  @JavascriptInterface
+  public fun foo(json: String) {
+    val map = this.adapter.fromJson(json)
+    val a = map!!.get("a") as Int
+    val b = map!!.get("b") as String
+    return this.originObject.foo(a, b)
+  }
+
+  @JavascriptInterface
+  public fun bar(json: String) {
+    val map = this.adapter.fromJson(json)
+    val a = map!!.get("a") as Int
+    val b = map!!.get("bbb") as String
+    return this.originObject.bar(a, b)
+  }
+
+  @JavascriptInterface
+  public fun caa(json: String) {
+    val map = this.adapter.fromJson(json)
+    val webViewContext = WebViewContext(JsBridgeManager.jsBridgeModuleMap[this])
+    val a = map!!.get("a") as Int
+    return this.originObject.caa(webViewContext, a)
+  }
+}
+```
+
+每个**@JsBridgeMethod**都对应一个**@JavascriptInterface**方法，并且自动解析了Json数据，以及传入WebViewContext对象。
+
+
+
+使用方式：
+
+```Kotlin
+// 内部会注册JavaScriptInterface对象到WebView，并缓存webView到JsBridgeManager容器中，
+// 便于各个方法获取WebViewContext
+JsBridgeManager.registerLocalJsBridge(
+    Test_JsBridge(),
+    webView,
+    *viewLifecycleOwner // 结合生命周期，防止内存泄露，destory时自动移除缓存的webView*
+)
+```
+
+
+> @JsBridgeModule注解的xxx会生成代码 xxx\_JsBridge，可以考虑把xxx和xxx\_JsBridge的对应关系也生成代码，之后使用xxx::class来获取xxx\_JsBridge实例，屏蔽硬编码。
+> 
+
+### 2. 模块结构
+![](./引用图片/JsBridge模块结构图.png)
+
+#### JsBridge\-Annotations模块
+
+包含设计的各个注解，是一个JVM模块
+
+JsBridgeModule：
+
+```Kotlin
+@Retention(AnnotationRetention.*SOURCE*)
+@Target(AnnotationTarget.*CLASS*)
+annotation class JsBridgeModule
+```
+
+JsBridgeMethod：
+
+```Kotlin
+@Retention(AnnotationRetention.*SOURCE*)
+@Target(AnnotationTarget.*FUNCTION*)
+annotation class JsBridgeMethod(
+    val name: String = "",
+)
+```
+
+JsBridgeParam：
+
+```Kotlin
+@Retention(AnnotationRetention.*SOURCE*)
+@Target(AnnotationTarget.*VALUE_PARAMETER*)
+annotation class JsBridgeParam(
+    val name: String,
+)
+```
+
+JsBridgeContext：
+
+```Kotlin
+@Retention(AnnotationRetention.*SOURCE*)
+@Target(AnnotationTarget.*VALUE_PARAMETER*)
+annotation class JsBridgeContext
+```
+
+#### JsBridge\-Compiler模块
+
+使用KSP处理注解，生成代码。使用KSP只能是一个JVM模块。
+
+#### JsBridge\-Base模块
+
+包含JsBridge中的基础功能，比如提供WebViewContext类。
+
+
+#### 上层应用模块
+
+使用注解编码代码，并使用ksp依赖JsBridge\-Compiler模块来生成代码。
+
+
+### 待优化点
+
+#### 1. 考虑使用字节码操作
+
+KSP生成代码，但无法修改现有代码，所以在生成代码的时候，产生了一个新的类，代理原始类（可以查看上面使用流程生成的代码Test\_JsBridge），注册时需要使用生成的代理类，其实对使用上存在不便。如果使用字节码方式去修改现有代码，可以更加无感知的直接使用原始类。
+
+KSP在多模块情况下，不同模块生成的代码无法相互感知，只能每个模块独立处理，并且只能处理源代码，而字节码操作方式可以感知所有模块的源码以及class文件，使用场景更宽泛，但使用不如KSP方便。
+
+由于当前JsBridge是几天内快速开发，没有足够的时间更充分考虑API设计和实现方式，所以后续如果继续完善或者改造JsBridge，则可以在KSP和字节码操作技术之间做考虑（也可以同时使用）。
+
+
+#### 2. API设计
+
+设计一个库，除了保证使用便捷和稳定性，API的设计也是非常重要的，这需要慎重考虑和实际使用验证，从而沉淀出良好的API。当前API和注解的设计是短暂考虑后完成的，还需要在使用中继续改进。
+
+
+#### 更多的功能
+
+目前只实现了项目实际需要的少量功能，还有一些可能会使用的功能如有必要可以开发。
+
+例如一些场景的支持：
+
+- Json数据解析支持多层嵌套结构：比如Json数据内的某个字段的值是一个Json对象（嵌套Json而非单层数据）或数组，还需要增加注解和对应KSP生成的代码。
+
+- 声明的@JsBridgeMethod方法可以支持全局、局部的场景。比如注册一个全局方法，所有的WebView都可以使用，而不用重复注册；注册局部方法，就只针对指定的单个WebView。
+
+
+支持完善的场景，需要更多的工作才能完成。
